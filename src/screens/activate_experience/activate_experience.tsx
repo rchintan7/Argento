@@ -22,8 +22,15 @@ import { LOGIN_POST } from "../../services/api_endpoint";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CustomToast } from "../../utils/toast";
 import { CommonActions } from "@react-navigation/native";
+import Toast from "react-native-toast-message";
 
 interface ActivateExperienceProps {
+    route: {
+        params: {
+            email: string;
+            firebase_uid: string;
+        };
+    };
     navigation: {
         dispatch(arg0: any): unknown;
         navigate: (screen: string) => void;
@@ -36,36 +43,38 @@ const genderOptions = [
     { label: "Other", value: "other" },
 ];
 
-const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) => {
+const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, route }) => {
     const insets = useSafeAreaInsets();
 
     // 🔹 User info
     const [name, setName] = useState('');
-    const [age, setAge] = useState('');
-    const [gender, setGender] = useState<string | null>(null);
+    const [dob, setDob] = useState(''); // string format: "YYYY-MM-DD"
+    const [showDobPicker, setShowDobPicker] = useState(false);
+    const [dobError, setDobError] = useState('');
+    const [gender, setGender] = useState<string | null>('male');
 
     // State for errors
     const [nameError, setNameError] = useState('');
     const [ageError, setAgeError] = useState('');
-    const [genderError, setGenderError] = useState('');
 
     // 🔹 Time pickers
-    const [morningTime, setMorningTime] = useState("9:00 AM");
-    const [eveningTime, setEveningTime] = useState("7:00 PM");
+    const [morningTime, setMorningTime] = useState("9:00");
+    const [eveningTime, setEveningTime] = useState("7:00");
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [selectedField, setSelectedField] = useState<"morning" | "evening" | null>(null);
 
     // 🔹 Permissions
-    const [cameraAccess, setCameraAccess] = useState(true);
-    const [notifications, setNotifications] = useState(true);
-    const [storage, setStorage] = useState(true);
+    const [cameraAccess, setCameraAccess] = useState(false);
+    const [notifications, setNotifications] = useState(false);
+    const [storage, setStorage] = useState(false);
 
     // 🔹 Time Picker Handler
     const handleConfirm = (date: Date) => {
-        const timeString = date.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-        });
+        // Force 24-hour format
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const timeString = `${hours}:${minutes}`;
+
         if (selectedField === "morning") setMorningTime(timeString);
         else if (selectedField === "evening") setEveningTime(timeString);
 
@@ -84,23 +93,12 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
             setNameError('');
         }
 
-        // Validate Age
-        if (!age.trim()) {
-            setAgeError('Age is required');
-            hasError = true;
-        } else if (isNaN(Number(age)) || Number(age) <= 0) {
-            setAgeError('Please enter a valid age');
+        // Validate DOB
+        if (!dob) {
+            setDobError('Date of Birth is required');
             hasError = true;
         } else {
-            setAgeError('');
-        }
-
-        // Validate Gender
-        if (!gender) {
-            setGenderError('Gender is required');
-            hasError = true;
-        } else {
-            setGenderError('');
+            setDobError('');
         }
 
         // Optional: Validate Camera permission
@@ -109,27 +107,38 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
             CustomToast({ text: 'Camera permission is required', toastType: 'error' });
         }
 
+        // Optional: Validate Notification permission
+        if (!notifications) {
+            hasError = true;
+            CustomToast({ text: 'Notification permission is required', toastType: 'error' });
+        }
+
+        // Optional: Validate Storage permission
+        if (!storage) {
+            hasError = true;
+            CustomToast({ text: 'Storage permission is required', toastType: 'error' });
+        }
+
         return !hasError;
     };
 
     // Function to handle sign in button press
     const handleSignIn = async () => {
         if (validateFields()) {
-            // navigation.navigate('NavigationBarScreens');
             const formData = {
-                "accepted_privacy_policy": false,
-                "accepted_terms_and_conditions": false,
-                "camera_enabled": false,
-                "device_platform": "android",
-                "device_token": "device_token",
-                "dob": "",
-                "email": "",
-                "evening_checkin": "",
-                "gender": "",
-                "morning_checkin": "",
-                "name": "",
-                "notifications_enabled": "",
-                "storage_enabled": ""
+                accepted_privacy_policy: true,
+                accepted_terms_and_conditions: true,
+                camera_enabled: cameraAccess,
+                device_platform: Platform.OS,
+                device_token: "device_token_123",
+                dob: dob,
+                email: route?.params?.email,
+                evening_checkin: eveningTime,
+                gender: gender,
+                morning_checkin: morningTime,
+                name: name.trim(),
+                notifications_enabled: notifications,
+                storage_enabled: storage,
             };
             loginMutation.mutate(formData);
         }
@@ -137,23 +146,27 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
 
     const loginMutation = useMutation({
         mutationFn: async (formData: any) => {
-            const { data } = await LOGIN_POST(formData);
+            const { data } = await LOGIN_POST(formData, route?.params?.firebase_uid);
             return data;
         },
         onSuccess: (data) => {
             // AsyncStorage.setItem('auth_token', data.data.token);
             // dispatch(loginSuccess(data.data.token));
-            CustomToast({ text: data.message, toastType: 'success' });
+            console.log(data);
+
+            CustomToast({ text: 'User created successful.', toastType: 'success' });
             setTimeout(() => {
                 navigation.dispatch(
                     CommonActions.reset({
                         index: 0,
-                        routes: [{ name: 'BottomNavigationBar' }],
+                        routes: [{ name: 'SecureEliteAccess' }],
                     })
                 );
             }, 500);
         },
         onError: (error: any) => {
+            console.log('ABC', error);
+
             CustomToast({ text: error?.message, toastType: 'error' });
         },
     });
@@ -193,10 +206,12 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
                     <SizeBox height={16} />
                     <TextInputBox
                         placeholder="Age"
-                        keyboardType="number-pad"
-                        value={age}
-                        onChangeText={setAge}
-                        error={ageError}
+                        value={dob}
+                        // keyboardType="number-pad"
+                        onChangeText={setDob}
+                        error={dobError}
+                        readOnly
+                        onPressIn={() => setShowDobPicker(true)}
                     />
                     <SizeBox height={16} />
 
@@ -206,11 +221,14 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
                         placeholderStyle={{ color: Colors.placHolder }}
                         selectedTextStyle={{ color: Colors.whiteColor }}
                         data={genderOptions}
-                        maxHeight={300}
+                        maxHeight={350}
                         labelField="label"
                         valueField="value"
                         placeholder="Select Gender"
                         value={gender}
+                        containerStyle={ActivateStyles.containerStyle}
+                        itemContainerStyle={ActivateStyles.itemContainerStyle}
+                        activeColor={Colors.placHolder}
                         onChange={(item) => setGender(item.value)}
                     />
 
@@ -222,11 +240,11 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
                     <TextInputBox
                         value={morningTime}
                         placeholder="Morning Check-in"
-                    // editable={false}
-                    // onPressIn={() => {
-                    //     setSelectedField("morning");
-                    //     setShowTimePicker(true);
-                    // }}
+                        editable={false}
+                        onPressIn={() => {
+                            setSelectedField("morning");
+                            setShowTimePicker(true);
+                        }}
                     />
                     <SizeBox height={16} />
 
@@ -234,11 +252,11 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
                     <TextInputBox
                         value={eveningTime}
                         placeholder="Evening Check-in"
-                    // editable={false}
-                    // onPressIn={() => {
-                    //     setSelectedField("evening");
-                    //     setShowTimePicker(true);
-                    // }}
+                        editable={false}
+                        onPressIn={() => {
+                            setSelectedField("evening");
+                            setShowTimePicker(true);
+                        }}
                     />
 
                     {/* 🔹 Time Picker Modal */}
@@ -247,6 +265,7 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
                         mode="time"
                         onConfirm={handleConfirm}
                         onCancel={() => setShowTimePicker(false)}
+                        is24Hour={true}
                     />
 
                     <SizeBox height={24} />
@@ -259,7 +278,7 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
                         <ToggleSwitch
                             isOn={cameraAccess}
                             onColor="green"
-                            offColor="grey"
+                            offColor={Colors.borderColor + 60}
                             size="medium"
                             onToggle={setCameraAccess}
                         />
@@ -269,7 +288,7 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
                         <ToggleSwitch
                             isOn={notifications}
                             onColor="green"
-                            offColor="grey"
+                            offColor={Colors.borderColor + 60}
                             size="medium"
                             onToggle={setNotifications}
                         />
@@ -279,7 +298,7 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
                         <ToggleSwitch
                             isOn={storage}
                             onColor="green"
-                            offColor="grey"
+                            offColor={Colors.borderColor + 60}
                             size="medium"
                             onToggle={setStorage}
                         />
@@ -289,21 +308,24 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
 
                     <AppButton
                         text={"Continue"}
-                        onPress={() => {
-                            console.log({
-                                gender,
-                                morningTime,
-                                eveningTime,
-                                cameraAccess,
-                                notifications,
-                                storage,
-                            });
-                            navigation.navigate("SecureEliteAccess");
-                        }}
+                        onPress={handleSignIn}
+                        loading={loginMutation.isPending}
                     />
                     <SizeBox height={40} />
                 </ScrollView>
             </KeyboardAvoidingView>
+            <Toast />
+            <DateTimePickerModal
+                isVisible={showDobPicker}
+                mode="date"
+                maximumDate={new Date()} // DOB cannot be in future
+                onConfirm={(date: Date) => {
+                    const formattedDate = date.toISOString().split('T')[0]; // "YYYY-MM-DD"
+                    setDob(formattedDate);
+                    setShowDobPicker(false);
+                }}
+                onCancel={() => setShowDobPicker(false)}
+            />
         </View>
     );
 };

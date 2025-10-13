@@ -20,31 +20,6 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<false/>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
-	<key>NSCameraUsageDescription</key>
-	<string>This app requires access to the camera to take photos and videos.</string>
-	<key>NSAppleMusicUsageDescription</key>
-	<string>This app requires access to your media library.</string>
-	<key>NSUserNotificationUsageDescription</key>
-	<string>This app would like to send you notifications.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>This app requires access to your photo library to select photos.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>This app requires permission to save photos to your library.</string>
-	<key>RCTNewArchEnabled</key>
-	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -56,10 +31,52 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAllowsArbitraryLoadsInWebContent</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>18.168.140.30</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>This app requires access to your media library.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app requires access to the camera to take photos and videos.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string></string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>This app requires permission to save photos to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app requires access to your photo library to select photos.</string>
+	<key>NSUserNotificationUsageDescription</key>
+	<string>This app would like to send you notifications.</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UIAppFonts</key>
 	<array>
-	    <string>AnonymousPro-Bold.ttf</string>
-	    <string>AnonymousPro-Regular.ttf</string>
+		<string>AnonymousPro-Bold.ttf</string>
+		<string>AnonymousPro-Regular.ttf</string>
 		<string>Antonio-Bold.ttf</string>
 		<string>Antonio-ExtraLight.ttf</string>
 		<string>Antonio-SemiBold.ttf</string>

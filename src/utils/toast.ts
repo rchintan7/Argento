@@ -16,7 +16,6 @@ interface SnackbarOptions {
 
 // Function to show a custom Snackbar
 export const CustomSnackbar = async (text: string): Promise<void> => {
-    await new Promise((resolve) => setTimeout(resolve, 100));
     const options: SnackbarOptions = {
         text: text,
         duration: Snackbar.LENGTH_SHORT,
@@ -39,11 +38,11 @@ export const CustomToast = (value: {
             text2: value.subText,
             position: 'bottom',
             text1Style: {
-                fontFamily: Fonts.Medium,
+                fontWeight: '500',
                 fontSize: 14,
             },
             text2Style: {
-                fontFamily: Fonts.Medium,
+                fontWeight: '500',
                 fontSize: 12,
             }
         };

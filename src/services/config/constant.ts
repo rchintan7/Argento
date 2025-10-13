@@ -10,5 +10,5 @@ export default {
 
   // Auth URL
 
-  signIn: 'user',
+  signIn: 'http://18.168.140.30:8080/api/v1/users',
 };

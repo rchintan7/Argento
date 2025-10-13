@@ -16,7 +16,7 @@ axiosInstance.interceptors.request.use(
     async request => {
         try {
             let auth_token;
-            if (request.url === '/api/v1/login' || request.url === '/api/v1/register') {
+            if (request.url === '/api/v1/users') {
             } else {
                 auth_token = await AsyncStorage.getItem('auth_token');
             }

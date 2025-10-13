@@ -15,7 +15,7 @@ const AppButton: React.FC<AppButtonProps> = ({ text, onPress, loading }) => {
             {
                 loading
                     ? <View style={styles.touchable}>
-                        <ActivityIndicator size="small" color={Colors.whiteColor} />
+                        <ActivityIndicator size="small" color={Colors.blackColor} />
                     </View>
                     : <TouchableOpacity disabled={loading} onPress={loading ? undefined : onPress} style={styles.touchable}>
                         <Text style={[styles.nextButtonText, { maxWidth: 300 }]} numberOfLines={1}>{text}</Text>

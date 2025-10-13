@@ -55,6 +55,17 @@ const ActivateStyles = StyleSheet.create({
         paddingHorizontal: 12,
         backgroundColor: Colors.darkGrey,
     },
+    containerStyle: {
+        borderRadius: 10,
+        overflow: 'hidden',
+        backgroundColor: Colors.darkGrey,
+        borderWidth: 1,
+        borderColor: Colors.placHolder,
+    },
+    itemContainerStyle: {
+        backgroundColor: Colors.darkGrey,
+        borderRadius: 4,
+    },
 });
 
 export default ActivateStyles;

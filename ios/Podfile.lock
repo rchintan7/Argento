@@ -18,9 +18,6 @@ PODS:
     - FirebaseAuth (~> 12.3.0)
   - Firebase/CoreOnly (12.3.0):
     - FirebaseCore (~> 12.3.0)
-  - Firebase/Messaging (12.3.0):
-    - Firebase/CoreOnly
-    - FirebaseMessaging (~> 12.3.0)
   - FirebaseAppCheckInterop (12.3.0)
   - FirebaseAuth (12.3.0):
     - FirebaseAppCheckInterop (~> 12.3.0)
@@ -40,25 +37,8 @@ PODS:
     - FirebaseCore (~> 12.3.0)
   - FirebaseCoreInternal (12.3.0):
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
-  - FirebaseInstallations (12.3.0):
-    - FirebaseCore (~> 12.3.0)
-    - GoogleUtilities/Environment (~> 8.1)
-    - GoogleUtilities/UserDefaults (~> 8.1)
-    - PromisesObjC (~> 2.4)
-  - FirebaseMessaging (12.3.0):
-    - FirebaseCore (~> 12.3.0)
-    - FirebaseInstallations (~> 12.3.0)
-    - GoogleDataTransport (~> 10.1)
-    - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
-    - GoogleUtilities/Environment (~> 8.1)
-    - GoogleUtilities/Reachability (~> 8.1)
-    - GoogleUtilities/UserDefaults (~> 8.1)
-    - nanopb (~> 3.30910.0)
   - fmt (11.0.2)
   - glog (0.3.5)
-  - GoogleDataTransport (10.1.0):
-    - nanopb (~> 3.30910.0)
-    - PromisesObjC (~> 2.4)
   - GoogleSignIn (9.0.0):
     - AppAuth (~> 2.0)
     - AppCheckCore (~> 11.0)
@@ -95,11 +75,6 @@ PODS:
   - hermes-engine (0.81.4):
     - hermes-engine/Pre-built (= 0.81.4)
   - hermes-engine/Pre-built (0.81.4)
-  - nanopb (3.30910.0):
-    - nanopb/decode (= 3.30910.0)
-    - nanopb/encode (= 3.30910.0)
-  - nanopb/decode (3.30910.0)
-  - nanopb/encode (3.30910.0)
   - PromisesObjC (2.4.0)
   - RCT-Folly (2024.11.18.00):
     - boost
@@ -2491,7 +2466,37 @@ PODS:
     - React-utils (= 0.81.4)
     - SocketRocket
   - RecaptchaInterop (101.0.0)
+  - RNAppleAuthentication (2.4.1):
+    - React-Core
   - RNCAsyncStorage (2.2.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
+  - RNDateTimePicker (8.4.5):
     - boost
     - DoubleConversion
     - fast_float
@@ -2524,11 +2529,6 @@ PODS:
     - React-Core
   - RNFBAuth (23.4.0):
     - Firebase/Auth (= 12.3.0)
-    - React-Core
-    - RNFBApp
-  - RNFBMessaging (23.4.0):
-    - Firebase/Messaging (= 12.3.0)
-    - FirebaseCoreExtension
     - React-Core
     - RNFBApp
   - RNGestureHandler (2.28.0):
@@ -2589,11 +2589,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNNotifee (9.1.8):
-    - React-Core
-    - RNNotifee/NotifeeCore (= 9.1.8)
-  - RNNotifee/NotifeeCore (9.1.8):
-    - React-Core
   - RNPermissions (5.4.2):
     - boost
     - DoubleConversion
@@ -3026,13 +3021,13 @@ DEPENDENCIES:
   - ReactAppDependencyProvider (from `build/generated/ios`)
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../node_modules/react-native/ReactCommon`)
+  - "RNAppleAuthentication (from `../node_modules/@invertase/react-native-apple-authentication`)"
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
+  - "RNDateTimePicker (from `../node_modules/@react-native-community/datetimepicker`)"
   - "RNFBApp (from `../node_modules/@react-native-firebase/app`)"
   - "RNFBAuth (from `../node_modules/@react-native-firebase/auth`)"
-  - "RNFBMessaging (from `../node_modules/@react-native-firebase/messaging`)"
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
-  - "RNNotifee (from `../node_modules/@notifee/react-native`)"
   - RNPermissions (from `../node_modules/react-native-permissions`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
@@ -3054,14 +3049,10 @@ SPEC REPOS:
     - FirebaseCore
     - FirebaseCoreExtension
     - FirebaseCoreInternal
-    - FirebaseInstallations
-    - FirebaseMessaging
-    - GoogleDataTransport
     - GoogleSignIn
     - GoogleUtilities
     - GTMAppAuth
     - GTMSessionFetcher
-    - nanopb
     - PromisesObjC
     - RecaptchaInterop
     - SocketRocket
@@ -3212,20 +3203,20 @@ EXTERNAL SOURCES:
     :path: build/generated/ios
   ReactCommon:
     :path: "../node_modules/react-native/ReactCommon"
+  RNAppleAuthentication:
+    :path: "../node_modules/@invertase/react-native-apple-authentication"
   RNCAsyncStorage:
     :path: "../node_modules/@react-native-async-storage/async-storage"
+  RNDateTimePicker:
+    :path: "../node_modules/@react-native-community/datetimepicker"
   RNFBApp:
     :path: "../node_modules/@react-native-firebase/app"
   RNFBAuth:
     :path: "../node_modules/@react-native-firebase/auth"
-  RNFBMessaging:
-    :path: "../node_modules/@react-native-firebase/messaging"
   RNGestureHandler:
     :path: "../node_modules/react-native-gesture-handler"
   RNGoogleSignin:
     :path: "../node_modules/@react-native-google-signin/google-signin"
-  RNNotifee:
-    :path: "../node_modules/@notifee/react-native"
   RNPermissions:
     :path: "../node_modules/react-native-permissions"
   RNReanimated:
@@ -3257,17 +3248,13 @@ SPEC CHECKSUMS:
   FirebaseCore: ff47fe1ad3ab9ef66edd3e8bc4647b493d2067f8
   FirebaseCoreExtension: 898ca55c7cb126f83747b32cb0daa95394b10853
   FirebaseCoreInternal: a9e1ff270f217489d9258563b693d11a312903bf
-  FirebaseInstallations: ca48ec60ea51b66b9f214a91847ea3720cde97f5
-  FirebaseMessaging: 919ce76cb353f0c36d463f5461d8ab584e6ed765
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
-  GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleSignIn: c7f09cfbc85a1abf69187be091997c317cc33b77
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   GTMAppAuth: 217a876b249c3c585a54fd6f73e6b58c4f5c4238
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
   hermes-engine: 35c763d57c9832d0eef764316ca1c4d043581394
-  nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f
   RCTDeprecation: c0ed3249a97243002615517dff789bf4666cf585
@@ -3335,13 +3322,13 @@ SPEC CHECKSUMS:
   ReactCodegen: 07322ec16b66c5f5d7ce7a7cadaba401ecb81908
   ReactCommon: a42100667ef42807c485a579847a5ec2c99e0a82
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
+  RNAppleAuthentication: b2d8b5ccba86b5b1e55a1a2e858f7ac6d8a21816
   RNCAsyncStorage: 8857fb173af29664cb90897903902dc8533e36cc
+  RNDateTimePicker: 49bfdc041c8faa2dd5dfb54f375360792d257005
   RNFBApp: 04850834479084af85bf3100391c38dd9ea79017
   RNFBAuth: 73f48ab6ed6b2395a39a318667ded7f2d4906350
-  RNFBMessaging: 8678e074c4ea9886d6fa83884dfa953967044ac8
   RNGestureHandler: 9339994ea5d1ff6ad2679b7d0cc3d49053111369
   RNGoogleSignin: f4acd1e528303c8283c2411f3b148a6968cef339
-  RNNotifee: 4a6ee5c7deaf00e005050052d73ee6315dff7ec9
   RNPermissions: cdc12961e14ccb4c1409113d53f6d5e418a4557e
   RNReanimated: 2635ec9d061c5eba3987bcc604443d78f363d3f7
   RNScreens: 871305075ddf1291411b051d86da9e0d9289de02
