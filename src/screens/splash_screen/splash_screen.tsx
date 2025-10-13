@@ -5,6 +5,7 @@ import SplashStyles from "./styles";
 import { Images } from "../../constants/images";
 import { CommonActions } from "@react-navigation/native";
 import SizeBox from "../../constants/sizebox";
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 interface SplashScreenProps {
     navigation: {
@@ -18,6 +19,12 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
     const imageTranslateY = useRef(new Animated.Value(-100)).current; // top to center
     const textOpacity = useRef(new Animated.Value(0)).current;
     const textTranslateY = useRef(new Animated.Value(100)).current; // bottom to center
+
+    useEffect(() => {
+        GoogleSignin.configure({
+            webClientId: "596921374194-9m97820ilal66v09cne5nf7j6o8oebh3.apps.googleusercontent.com",
+        });
+    }, []);
 
     useEffect(() => {
         Animated.parallel([

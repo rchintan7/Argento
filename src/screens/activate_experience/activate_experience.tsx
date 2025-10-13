@@ -1,14 +1,13 @@
 import React, { useState } from "react";
 import {
-    Image,
     KeyboardAvoidingView,
     ScrollView,
     Text,
     View,
     Platform,
+    Keyboard,
 } from "react-native";
 import GlobalStyles from "../../constants/global_styles";
-import { Images } from "../../constants/images";
 import SizeBox from "../../constants/sizebox";
 import AppButton from "../../componets/app_button";
 import ActivateStyles from "./styles";
@@ -18,6 +17,11 @@ import ToggleSwitch from "toggle-switch-react-native";
 import { Dropdown } from "react-native-element-dropdown";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Colors from "../../constants/colors";
+import { useMutation } from "@tanstack/react-query";
+import { LOGIN_POST } from "../../services/api_endpoint";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { CustomToast } from "../../utils/toast";
+import { CommonActions } from "@react-navigation/native";
 
 interface ActivateExperienceProps {
     navigation: {
@@ -35,14 +39,23 @@ const genderOptions = [
 const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) => {
     const insets = useSafeAreaInsets();
 
-    // 🔹 States
+    // 🔹 User info
+    const [name, setName] = useState('');
+    const [age, setAge] = useState('');
     const [gender, setGender] = useState<string | null>(null);
+
+    // State for errors
+    const [nameError, setNameError] = useState('');
+    const [ageError, setAgeError] = useState('');
+    const [genderError, setGenderError] = useState('');
+
+    // 🔹 Time pickers
     const [morningTime, setMorningTime] = useState("9:00 AM");
     const [eveningTime, setEveningTime] = useState("7:00 PM");
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [selectedField, setSelectedField] = useState<"morning" | "evening" | null>(null);
 
-    // Switches
+    // 🔹 Permissions
     const [cameraAccess, setCameraAccess] = useState(true);
     const [notifications, setNotifications] = useState(true);
     const [storage, setStorage] = useState(true);
@@ -58,6 +71,93 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
 
         setShowTimePicker(false);
     };
+
+    // Validation function
+    const validateFields = () => {
+        let hasError = false;
+
+        // Validate Name
+        if (!name.trim()) {
+            setNameError('Name is required');
+            hasError = true;
+        } else {
+            setNameError('');
+        }
+
+        // Validate Age
+        if (!age.trim()) {
+            setAgeError('Age is required');
+            hasError = true;
+        } else if (isNaN(Number(age)) || Number(age) <= 0) {
+            setAgeError('Please enter a valid age');
+            hasError = true;
+        } else {
+            setAgeError('');
+        }
+
+        // Validate Gender
+        if (!gender) {
+            setGenderError('Gender is required');
+            hasError = true;
+        } else {
+            setGenderError('');
+        }
+
+        // Optional: Validate Camera permission
+        if (!cameraAccess) {
+            hasError = true;
+            CustomToast({ text: 'Camera permission is required', toastType: 'error' });
+        }
+
+        return !hasError;
+    };
+
+    // Function to handle sign in button press
+    const handleSignIn = async () => {
+        if (validateFields()) {
+            // navigation.navigate('NavigationBarScreens');
+            const formData = {
+                "accepted_privacy_policy": false,
+                "accepted_terms_and_conditions": false,
+                "camera_enabled": false,
+                "device_platform": "android",
+                "device_token": "device_token",
+                "dob": "",
+                "email": "",
+                "evening_checkin": "",
+                "gender": "",
+                "morning_checkin": "",
+                "name": "",
+                "notifications_enabled": "",
+                "storage_enabled": ""
+            };
+            loginMutation.mutate(formData);
+        }
+    };
+
+    const loginMutation = useMutation({
+        mutationFn: async (formData: any) => {
+            const { data } = await LOGIN_POST(formData);
+            return data;
+        },
+        onSuccess: (data) => {
+            // AsyncStorage.setItem('auth_token', data.data.token);
+            // dispatch(loginSuccess(data.data.token));
+            CustomToast({ text: data.message, toastType: 'success' });
+            setTimeout(() => {
+                navigation.dispatch(
+                    CommonActions.reset({
+                        index: 0,
+                        routes: [{ name: 'BottomNavigationBar' }],
+                    })
+                );
+            }, 500);
+        },
+        onError: (error: any) => {
+            CustomToast({ text: error?.message, toastType: 'error' });
+        },
+    });
+
 
     return (
         <View style={[GlobalStyles.mainContainer, GlobalStyles.startVertical]}>
@@ -84,9 +184,20 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation }) =
 
                     <SizeBox height={40} />
 
-                    <TextInputBox placeholder="Name" />
+                    <TextInputBox
+                        placeholder="Name"
+                        value={name}
+                        onChangeText={setName}
+                        error={nameError}
+                    />
                     <SizeBox height={16} />
-                    <TextInputBox placeholder="Age" keyboardType="number-pad" />
+                    <TextInputBox
+                        placeholder="Age"
+                        keyboardType="number-pad"
+                        value={age}
+                        onChangeText={setAge}
+                        error={ageError}
+                    />
                     <SizeBox height={16} />
 
                     {/* 🔹 Gender Dropdown */}
