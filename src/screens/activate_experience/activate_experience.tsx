@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     KeyboardAvoidingView,
     ScrollView,
     Text,
     View,
     Platform,
-    Keyboard,
+    Alert,
 } from "react-native";
 import GlobalStyles from "../../constants/global_styles";
 import SizeBox from "../../constants/sizebox";
@@ -19,16 +19,15 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import Colors from "../../constants/colors";
 import { useMutation } from "@tanstack/react-query";
 import { LOGIN_POST } from "../../services/api_endpoint";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CustomToast } from "../../utils/toast";
 import { CommonActions } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
+import { check, request, PERMISSIONS, RESULTS, requestNotifications, openSettings } from "react-native-permissions";
 
 interface ActivateExperienceProps {
     route: {
         params: {
             email: string;
-            firebase_uid: string;
         };
     };
     navigation: {
@@ -45,6 +44,98 @@ const genderOptions = [
 
 const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, route }) => {
     const insets = useSafeAreaInsets();
+
+    useEffect(() => {
+        check(PERMISSIONS.ANDROID.CAMERA).then(result => {
+            if (result === RESULTS.GRANTED) setCameraAccess(true);
+        });
+    }, []);
+
+    // 🔹 Reusable Alert to open settings
+    const showSettingsAlert = (title: string) => {
+        Alert.alert(
+            `${title} Permission`,
+            `You have permanently denied ${title.toLowerCase()} access. Please enable it from app settings.`,
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Open Settings", onPress: () => openSettings() },
+            ],
+            { cancelable: true }
+        );
+    };
+
+    // 🔹 CAMERA Permission
+    const handleCameraPermission = async () => {
+        const permission =
+            Platform.OS === "ios"
+                ? PERMISSIONS.IOS.CAMERA
+                : PERMISSIONS.ANDROID.CAMERA;
+
+        const status = await check(permission);
+
+        if (status === RESULTS.GRANTED) {
+            setCameraAccess(true);
+            CustomToast({ text: "Camera already granted", toastType: "success" });
+        } else if (status === RESULTS.DENIED) {
+            const newStatus = await request(permission);
+            if (newStatus === RESULTS.GRANTED) {
+                setCameraAccess(true);
+                CustomToast({ text: "Camera permission granted", toastType: "success" });
+            } else if (newStatus === RESULTS.BLOCKED) {
+                showSettingsAlert("Camera");
+                setCameraAccess(false);
+            } else {
+                setCameraAccess(false);
+            }
+        } else if (status === RESULTS.BLOCKED) {
+            showSettingsAlert("Camera");
+            setCameraAccess(false);
+        }
+    };
+
+    // 🔹 NOTIFICATIONS Permission
+    const handleNotificationPermission = async () => {
+        const { status } = await requestNotifications(["alert", "sound", "badge"]);
+
+        if (status === RESULTS.GRANTED) {
+            setNotifications(true);
+            CustomToast({ text: "Notifications enabled", toastType: "success" });
+        } else if (status === RESULTS.BLOCKED) {
+            showSettingsAlert("Notifications");
+            setNotifications(false);
+        } else {
+            setNotifications(false);
+        }
+    };
+
+    // 🔹 STORAGE Permission
+    const handleStoragePermission = async () => {
+        const permission =
+            Platform.OS === "ios"
+                ? PERMISSIONS.IOS.PHOTO_LIBRARY
+                : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE;
+
+        const status = await check(permission);
+
+        if (status === RESULTS.GRANTED) {
+            setStorage(true);
+            CustomToast({ text: "Storage already granted", toastType: "success" });
+        } else if (status === RESULTS.DENIED) {
+            const newStatus = await request(permission);
+            if (newStatus === RESULTS.GRANTED) {
+                setStorage(true);
+                CustomToast({ text: "Storage access granted", toastType: "success" });
+            } else if (newStatus === RESULTS.BLOCKED) {
+                showSettingsAlert("Storage");
+                setStorage(false);
+            } else {
+                setStorage(false);
+            }
+        } else if (status === RESULTS.BLOCKED) {
+            showSettingsAlert("Storage");
+            setStorage(false);
+        }
+    };
 
     // 🔹 User info
     const [name, setName] = useState('');
@@ -146,14 +237,10 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
 
     const loginMutation = useMutation({
         mutationFn: async (formData: any) => {
-            const { data } = await LOGIN_POST(formData, route?.params?.firebase_uid);
+            const { data } = await LOGIN_POST(formData);
             return data;
         },
         onSuccess: (data) => {
-            // AsyncStorage.setItem('auth_token', data.data.token);
-            // dispatch(loginSuccess(data.data.token));
-            console.log(data);
-
             CustomToast({ text: 'User created successful.', toastType: 'success' });
             setTimeout(() => {
                 navigation.dispatch(
@@ -165,8 +252,6 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
             }, 500);
         },
         onError: (error: any) => {
-            console.log('ABC', error);
-
             CustomToast({ text: error?.message, toastType: 'error' });
         },
     });
@@ -207,10 +292,10 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
                     <TextInputBox
                         placeholder="Age"
                         value={dob}
-                        // keyboardType="number-pad"
+                        editable={false}
+                        readOnly
                         onChangeText={setDob}
                         error={dobError}
-                        readOnly
                         onPressIn={() => setShowDobPicker(true)}
                     />
                     <SizeBox height={16} />
@@ -228,7 +313,8 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
                         value={gender}
                         containerStyle={ActivateStyles.containerStyle}
                         itemContainerStyle={ActivateStyles.itemContainerStyle}
-                        activeColor={Colors.placHolder}
+                        activeColor={Colors.placHolder + 30}
+                        itemTextStyle={{ color: Colors.whiteColor }}
                         onChange={(item) => setGender(item.value)}
                     />
 
@@ -241,6 +327,7 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
                         value={morningTime}
                         placeholder="Morning Check-in"
                         editable={false}
+                        readOnly
                         onPressIn={() => {
                             setSelectedField("morning");
                             setShowTimePicker(true);
@@ -253,6 +340,7 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
                         value={eveningTime}
                         placeholder="Evening Check-in"
                         editable={false}
+                        readOnly
                         onPressIn={() => {
                             setSelectedField("evening");
                             setShowTimePicker(true);
@@ -280,7 +368,10 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
                             onColor="green"
                             offColor={Colors.borderColor + 60}
                             size="medium"
-                            onToggle={setCameraAccess}
+                            onToggle={(isOn) => {
+                                if (isOn) handleCameraPermission();
+                                else setCameraAccess(false);
+                            }}
                         />
                     </View>
                     <View style={ActivateStyles.switchRow}>
@@ -290,7 +381,10 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
                             onColor="green"
                             offColor={Colors.borderColor + 60}
                             size="medium"
-                            onToggle={setNotifications}
+                            onToggle={(isOn) => {
+                                if (isOn) handleNotificationPermission();
+                                else setNotifications(false);
+                            }}
                         />
                     </View>
                     <View style={ActivateStyles.switchRow}>
@@ -300,7 +394,10 @@ const ActivateExperience: React.FC<ActivateExperienceProps> = ({ navigation, rou
                             onColor="green"
                             offColor={Colors.borderColor + 60}
                             size="medium"
-                            onToggle={setStorage}
+                            onToggle={(isOn) => {
+                                if (isOn) handleStoragePermission();
+                                else setStorage(false);
+                            }}
                         />
                     </View>
 

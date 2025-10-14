@@ -4,14 +4,12 @@ import { constant } from './config';
 
 //! USER GET API
 
-export const SELF_GET = () => axiosInstance.get(constant.getProfile)
+export const SELF_GET = () => axiosInstance.get(constant.getSocial)
 
 //! AUTH API
 
-export const LOGIN_POST = (data: any, userIdToken: any) => axios.post(constant.signIn, data, {
-    headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${userIdToken}`
-    }
-})
+export const LOGIN_POST = (data: any) => axiosInstance.post(constant.signIn, data)
+
+//! QUESTIONS GET API
+
+export const QUESTIONS_GET = () => axiosInstance.get(constant.getQuestions)

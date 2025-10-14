@@ -80,7 +80,7 @@ android {
 
     namespace "com.argento"
     defaultConfig {
-        applicationId "com.argento"
+        applicationId "com.argentoapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

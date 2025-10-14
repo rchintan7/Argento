@@ -1,12 +1,8 @@
 import { combineReducers, configureStore } from '@reduxjs/toolkit'
+import userDataReducer from '../slices/user.slice'
 import { persistStore, persistReducer } from 'redux-persist'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-
-export interface UserState {
-    token: string | undefined;
-    isLogin: boolean;
-    userData: any;
-}
+import { UserState } from '../slices/types';
 
 export interface RootState {
     user: UserState;
@@ -19,7 +15,7 @@ const userPersistConfig = {
 }
 
 const rootReducer = combineReducers({
-    // user: persistReducer(userPersistConfig, userDataReducer),
+    user: persistReducer(userPersistConfig, userDataReducer),
 });
 
 const store = configureStore({

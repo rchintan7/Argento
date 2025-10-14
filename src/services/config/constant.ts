@@ -4,11 +4,15 @@ export default {
 
   BASE_URL: 'http://18.168.140.30:8080/api/v1/',
 
-  // Get Profile URL
+  // Get Social URL
 
-  getProfile: 'users/exists',
+  getSocial: 'users/exists',
 
   // Auth URL
 
-  signIn: 'http://18.168.140.30:8080/api/v1/users',
+  signIn: 'users',
+
+  // Questions URL
+
+  getQuestions: 'check-ins/questions',
 };

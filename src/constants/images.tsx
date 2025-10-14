@@ -8,6 +8,8 @@ import ProfileAactive from './../assets/svgs/profile_active.svg';
 import ProfileInAactive from './../assets/svgs/profile_inactive.svg';
 import DownArrow from './../assets/svgs/downArrow.svg';
 import RightArrow from './../assets/svgs/rightArrow.svg';
+import PreviousArrow from './../assets/svgs/previousArrow.svg';
+import NextArrow from './../assets/svgs/nextArrow.svg';
 
 const Svgs = {
     homeActive: HomeActive,
@@ -20,6 +22,8 @@ const Svgs = {
     profileInAactive: ProfileInAactive,
     downArrow: DownArrow,
     rightArrow: RightArrow,
+    previousArrow: PreviousArrow,
+    nextArrow: NextArrow,
 }
 
 const Images = {

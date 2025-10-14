@@ -9,7 +9,9 @@ import { GoogleSignin } from "@react-native-google-signin/google-signin";
 // Apple Sign-In
 import { appleAuth } from "@invertase/react-native-apple-authentication";
 import { CommonActions } from "@react-navigation/native";
-import { getAppleKeyFromAsync } from "../../services/config/async";
+import { clearAllAsync, getAppleKeyFromAsync } from "../../services/config/async";
+import { useDispatch } from "react-redux";
+import { logout } from "../../services/slices/user.slice";
 
 interface ProfileScreenProps {
     navigation: {
@@ -20,6 +22,7 @@ interface ProfileScreenProps {
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
     const insets = useSafeAreaInsets();
+    const dispatch = useDispatch();
 
     const handleLogout = async () => {
         try {
@@ -41,6 +44,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
             } catch (err) {
                 console.log("Apple sign-out error:", err);
             }
+
+            await clearAllAsync();
+            dispatch(logout());
 
             // Navigate back to login or welcome screen
             navigation.dispatch(

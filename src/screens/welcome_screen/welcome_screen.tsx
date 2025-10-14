@@ -8,10 +8,13 @@ import AppButton from "../../componets/app_button";
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { appleAuth } from '@invertase/react-native-apple-authentication';
 import { jwtDecode } from 'jwt-decode';
-import { saveAppleKeyInAsync } from "../../services/config/async";
-import auth from "@react-native-firebase/auth";
+import { saveAppleKeyInAsync, saveValueInAsync } from "../../services/config/async";
 import { CustomToast } from "../../utils/toast";
 import Toast from "react-native-toast-message";
+import { SELF_GET } from "../../services/api_endpoint";
+import { CommonActions } from "@react-navigation/native";
+import { useDispatch } from 'react-redux';
+import { loginSuccess } from "../../services/slices/user.slice";
 
 interface WelcomeScreenProps {
     navigation: {
@@ -32,6 +35,7 @@ type AppleTokenPayload = {
 };
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
+    const dispatch = useDispatch();
     const [googleLoading, setGoogleLoading] = useState(false);
     const [appleLoading, setAppleLoading] = useState(false);
 
@@ -60,12 +64,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
                     text: "Google Sign-In successful",
                     toastType: "success"
                 });
-                setTimeout(() => {
-                    navigation.navigate("ActivateExperience", {
-                        email,
-                        firebase_uid: firebaseUID,
-                    });
-                }, 500);
+                await saveValueInAsync('token', `${firebaseUID}`);
+                dispatch(loginSuccess(firebaseUID));
+                socialMutation(email);
             }
         } catch (error: any) {
             CustomToast({
@@ -94,8 +95,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             if (identityToken) {
                 await saveAppleKeyInAsync("appleKey", user);
                 const decoded: AppleTokenPayload = jwtDecode(identityToken);
-                // const appleCredential = auth.AppleAuthProvider.credential(identityToken);
-                // const userSignIn = await auth().signInWithCredential(appleCredential);
 
                 const finalEmail = email || decoded.email;
                 const firebaseUID = identityToken;
@@ -105,10 +104,9 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
                         text: "Apple Sign-In successful",
                         toastType: "success"
                     });
-                    navigation.navigate("ActivateExperience", {
-                        email: finalEmail,
-                        firebase_uid: firebaseUID,
-                    });
+                    await saveValueInAsync('token', firebaseUID);
+                    dispatch(loginSuccess(firebaseUID));
+                    socialMutation(finalEmail);
                 }
             } else {
                 CustomToast({
@@ -130,6 +128,29 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
         }
     };
 
+
+    const socialMutation = async (finalEmail: string) => {
+        try {
+            const data: any = await SELF_GET();
+            if (data?.exists === false) {
+                setTimeout(() => {
+                    navigation.navigate("ActivateExperience", { email: finalEmail });
+                }, 1000);
+            } else {
+                setTimeout(() => {
+                    navigation.dispatch(
+                        CommonActions.reset({
+                            index: 0,
+                            routes: [{ name: 'SecureEliteAccess' }],
+                        })
+                    );
+                }, 1000);
+            }
+        } catch (error) {
+            console.log('error', error);
+        }
+    };
+
     return (
         <View style={[GlobalStyles.mainContainer, GlobalStyles.center]}>
             <Image
@@ -144,22 +165,20 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
                 <AppButton
                     text={"Continue with Google"}
                     onPress={() => {
-                        // navigation.navigate("ActivateExperience", {
-                        //     // email: finalEmail,
-                        //     // firebase_uid: firebaseUID,
-                        // });
                         onGooglePress();
                     }}
                     loading={googleLoading}
                 />
                 <SizeBox height={20} />
-                <AppButton
-                    text={"Continue with Apple"}
-                    onPress={() => {
-                        onApplePress();
-                    }}
-                    loading={appleLoading}
-                />
+                {
+                    Platform.OS === 'ios' && <AppButton
+                        text={"Continue with Apple"}
+                        onPress={() => {
+                            onApplePress();
+                        }}
+                        loading={appleLoading}
+                    />
+                }
             </View>
             <Toast />
         </View>

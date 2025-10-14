@@ -5,6 +5,8 @@ import SplashStyles from "./styles";
 import { Images } from "../../constants/images";
 import { CommonActions } from "@react-navigation/native";
 import SizeBox from "../../constants/sizebox";
+import { useSelector } from "react-redux";
+import { RootState } from "../../services/redux/store";
 interface SplashScreenProps {
     navigation: {
         dispatch(arg0: any): unknown;
@@ -17,6 +19,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
     const imageTranslateY = useRef(new Animated.Value(-100)).current; // top to center
     const textOpacity = useRef(new Animated.Value(0)).current;
     const textTranslateY = useRef(new Animated.Value(100)).current; // bottom to center
+
+    const { isLogin } = useSelector((state: RootState) => state.user);
 
     useEffect(() => {
         Animated.parallel([
@@ -49,13 +53,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ navigation }) => {
             navigation.dispatch(
                 CommonActions.reset({
                     index: 0,
-                    routes: [{ name: "InformationCorousel" }],
+                    routes: [{ name: isLogin === true ? "BottomTabs" : "InformationCorousel" }],
                 })
             );
         }, 2000);
 
         return () => clearTimeout(timer);
-    }, [navigation]);
+    }, [navigation, isLogin]);
 
     return (
         <View style={[GlobalStyles.mainContainer, GlobalStyles.center]}>

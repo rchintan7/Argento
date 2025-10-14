@@ -1,6 +1,7 @@
 const Colors = {
     primaryColor: '#16FF00',
     secondryColor: '#141415',
+    greenShade: '#143012',
     lightGreen: '#3D5245',
     whiteColor: '#ffffff',
     blackColor: '#000000',
@@ -12,6 +13,7 @@ const Colors = {
     bottomTabColor: '#1A1A1A',
     blueColor: '#1581ec',
     orangeColor: '#e64500',
+    sliderColor: '#78787847',
 };
 
 export default Colors;

@@ -80,9 +80,17 @@ const HomeStyles = StyleSheet.create({
         borderRadius: 10,
     },
     nextText: {
-        color: "#000",
+        color: Colors.blackColor,
         fontSize: 20,
         fontWeight: "bold",
+    },
+    stepMarker: {
+        height: 5,
+        width: 5,
+        borderRadius: 12,
+        backgroundColor: Colors.sliderColor,
+        bottom: -18,
+        left: 15
     },
 });
 
