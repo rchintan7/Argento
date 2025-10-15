@@ -1,18 +1,30 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Dimensions, Image, Text, TouchableOpacity, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import {
+    Animated,
+    Easing,
+    Image,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import GlobalStyles from "../../constants/global_styles";
 import HomeStyles from "./styles";
 import Colors from "../../constants/colors";
-import { Images, Svgs } from "../../constants/images";
-import { Slider } from "@miblanchard/react-native-slider";
+import { Images } from "../../constants/images";
 import SizeBox from "../../constants/sizebox";
 import HeaderCalendar from "./components/header_calendar";
 import { useMutation } from "@tanstack/react-query";
 import { CustomToast } from "../../utils/toast";
-import { QUESTIONS_GET } from "../../services/api_endpoint";
+import { QUESTIONS_GET, QUESTIONS_PUT } from "../../services/api_endpoint";
+import { useSelector } from "react-redux";
+import { RootState } from "../../services/redux/store";
 
-const { width } = Dimensions.get("window");
+// ⬇️ Imported New Components
+import QuestionText from "./components/question_text";
+import QuestionRing from "./components/question_ring";
+import QuestionSlider from "./components/question_slider";
+import NextButton from "./components/next_button";
+import Toast from "react-native-toast-message";
+import ActivitiesChip from "./components/activities_chip";
 
 // API types
 interface ApiScaleOption {
@@ -40,46 +52,48 @@ type UiQuestion = {
     type: string;
 };
 
-// Geometry and look
+// Constants
 const RING_COUNT = 5;
 const RING_SIZE = 200;
-const STROKE_WIDTH = 3;
-const RING_GAP = 12;
-const TRACK_OPACITY = 0.2;
+const STROKE_WIDTH = 1.6;
+const RING_GAP = 10;
 
 const radiusForIndex = (i: number) => {
     const outer = (RING_SIZE - STROKE_WIDTH) / 2;
     return outer - i * RING_GAP;
 };
 const circumference = (r: number) => 2 * Math.PI * r;
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
-// Inside-out mapping: first question (index 1) => innermost ring (i=4)
+// Modify the ringIndexForQuestion function to handle 6 questions with 5 rings
 const ringIndexForQuestion = (questionIdx: number) => {
-    const qIdx = Math.max(1, Math.min(RING_COUNT, questionIdx)); // clamp 1..5
-    return RING_COUNT - qIdx; // 1->4, 2->3, 3->2, 4->1, 5->0
+    if (questionIdx > RING_COUNT) return RING_COUNT - 1; // Last ring for the 6th question
+    const qIdx = Math.max(1, Math.min(RING_COUNT, questionIdx));
+    return RING_COUNT - qIdx;
 };
 
 const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
-    const [index, setIndex] = useState(0); // 0 welcome, 1..5 questions
+    const { userData } = useSelector((state: RootState) => state.user);
+    const [index, setIndex] = useState(0);
     const [apiQuestions, setApiQuestions] = useState<ApiQuestion[]>([]);
     const [value, setValue] = useState<number>(1);
     const fadeAnim = useRef(new Animated.Value(1)).current;
 
-    // Per-ring dashoffset animation
+    // Animated ring offsets
     const ringOffsets = useRef(
         Array.from({ length: RING_COUNT }, () => new Animated.Value(0))
     ).current;
 
-    // Use state for colors so stroke updates re-render
+    // Colors per ring
     const [ringColors, setRingColors] = useState<string[]>(
-        Array.from({ length: RING_COUNT }, () => Colors.primaryColor)
+        Array.from({ length: RING_COUNT }, () => Colors.ringColor)
     );
 
-    useEffect(() => {
-        questionsMutation.mutate();
-    }, []);
+    // Success animation
+    const successScale = useRef(new Animated.Value(0.95)).current;
+    const [showSuccess, setShowSuccess] = useState(false);
+    const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Fetch questions
     const questionsMutation = useMutation({
         mutationFn: async () => {
             const { data } = await QUESTIONS_GET();
@@ -89,17 +103,22 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             const sorted = [...data].sort(
                 (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
             );
-            setApiQuestions(sorted.slice(0, RING_COUNT));
+            setApiQuestions(sorted);
         },
         onError: (error: any) => {
             CustomToast({ text: error?.message, toastType: "error" });
         },
     });
 
+    useEffect(() => {
+        questionsMutation.mutate();
+    }, []);
+
+    // Prepare UI Questions
     const uiQuestions: UiQuestion[] = useMemo(() => {
         const welcome: UiQuestion = {
             id: "static-welcome",
-            Question: "Good Morning Kasiel, \nStart your day with a check-in.",
+            Question: `Good Morning ${userData?.name}, \nStart your day with a check-in.`,
             Slider: false,
             Button: true,
             type: "static",
@@ -133,55 +152,43 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
     const current = uiQuestions[index];
 
-    // Enter question: reset slider, offsets, and ring colors
+    // Reset slider when question changes
     useEffect(() => {
         if (index > 0 && current?.Slider && current.min != null) {
             setValue(current.min);
-
-            // Empty all rings
-            for (let i = 0; i < RING_COUNT; i++) {
-                const r = radiusForIndex(i);
-                const circ = circumference(r);
-                ringOffsets[i].setValue(circ);
-            }
-
-            // Neutral colors for all rings
-            setRingColors(Array.from({ length: RING_COUNT }, () => Colors.primaryColor));
         }
-    }, [index, current, ringOffsets]);
+    }, [index, current]);
 
-    // Ratio for arc length
+    // Ratio for arc fill
     const ratio = useMemo(() => {
         const v = typeof value === "number" ? value + 1 : 1;
         return Math.max(0, Math.min(1, (v - 1) / 5));
     }, [value]);
 
-    // Current option color (for ring and slider)
+    // Get current option color
     const currentOptionColor = useMemo(() => {
         const q = uiQuestions[index];
-        if (!(q?.options?.length)) return Colors.blueColor;
+        if (!q?.options?.length) return Colors.blueColor;
         const nearest = q.options.reduce(
             (acc, opt) => {
                 const dist = Math.abs((value ?? 0) - opt.value);
                 return dist < acc.dist ? { opt, dist } : acc;
             },
-            { opt: q.options[0], dist: Infinity as number }
+            { opt: q.options[0], dist: Infinity }
         ).opt;
         return nearest?.color_hex ?? Colors.blueColor;
     }, [uiQuestions, index, value]);
 
-    // Update active ring color and arc length
+    // Animate active ring
     useEffect(() => {
         if (index === 0) return;
         const rIdx = ringIndexForQuestion(index);
-
         setRingColors((prev) => {
             if (prev[rIdx] === currentOptionColor) return prev;
             const next = [...prev];
             next[rIdx] = currentOptionColor;
             return next;
         });
-
         const r = radiusForIndex(rIdx);
         const circ = circumference(r);
         const target = circ * (1 - ratio);
@@ -191,123 +198,124 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             duration: 350,
             useNativeDriver: false,
         }).start();
-    }, [value, index, ratio, currentOptionColor, ringOffsets]);
+    }, [value, index, ratio, currentOptionColor]);
 
+    // Pulse animation
+    const playTwoSecondPulse = () => {
+        successScale.setValue(0.95);
+        Animated.sequence([
+            Animated.timing(successScale, {
+                toValue: 1.1,
+                duration: 1000,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: true,
+            }),
+            Animated.timing(successScale, {
+                toValue: 0.95,
+                duration: 1000,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: true,
+            }),
+        ]).start(() => setShowSuccess(false));
+    };
+
+    useEffect(() => {
+        return () => {
+            if (successTimer.current) clearTimeout(successTimer.current);
+        };
+    }, []);
+
+    // Next button logic
     const handleNext = () => {
         Animated.sequence([
             Animated.timing(fadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
             Animated.timing(fadeAnim, { toValue: 1, duration: 160, useNativeDriver: true }),
         ]).start(() => {
-            if (index < uiQuestions.length - 1) setIndex((p) => p + 1);
+            if (index < uiQuestions.length) {
+                if (index > 0 && index < uiQuestions.length) {
+                    const currentQuestion = uiQuestions[index];
+                    const payload = {
+                        answer: value,
+                        question_id: currentQuestion.id,
+                        date: new Date().toISOString().split('T')[0]
+                    };
+                    questionMutation.mutate(payload);
+                    setShowSuccess(true);
+                    if (successTimer.current) clearTimeout(successTimer.current);
+                    playTwoSecondPulse();
+                    successTimer.current = setTimeout(() => setShowSuccess(false), 2000);
+                }
+                setIndex((p) => p + 1);
+            }
         });
     };
 
-    const Marker = () => <View key={index} style={HomeStyles.stepMarker} />;
+    const questionMutation = useMutation({
+        mutationFn: async (formData: any) => {
+            const { data } = await QUESTIONS_PUT(formData);
+            return data;
+        },
+        onSuccess: (data) => {
+            // CustomToast({ text: 'Submitted successfully', toastType: 'success' });
+        },
+        onError: (error: any) => {
+            CustomToast({ text: error?.message, toastType: 'error' });
+        },
+    });
 
     return (
         <View style={[GlobalStyles.mainContainer, GlobalStyles.startVertical]}>
+
+            {/* Header calendar */}
             <HeaderCalendar />
 
             <View style={[HomeStyles.secondContainer, { alignItems: "center" }]}>
-                <Animated.View style={{ opacity: fadeAnim }}>
-                    <Text style={[HomeStyles.questionText, { width: width * 0.85 }]}>
-                        <Svgs.rightArrow height={10} width={10} /> {current?.Question}
-                    </Text>
-                </Animated.View>
+                {/* Question text */}
+                <QuestionText fadeAnim={fadeAnim} text={current?.Question} />
 
                 <SizeBox flex={1} />
 
-                {index === 0 ? (
-                    <TouchableOpacity onPress={handleNext} activeOpacity={0.8}>
-                        <Image source={Images.addRingImage} style={HomeStyles.ringImage} />
-                    </TouchableOpacity>
-                ) : (
-                    <View
-                        style={{
-                            width: RING_SIZE,
-                            height: RING_SIZE,
-                            justifyContent: "center",
-                            alignItems: "center",
-                        }}
-                    >
-                        <Svg width={RING_SIZE} height={RING_SIZE} viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}>
-                            {/* Tracks */}
-                            {Array.from({ length: RING_COUNT }).map((_, i) => {
-                                const r = radiusForIndex(i);
-                                return (
-                                    <Circle
-                                        key={`track-${i}-${index}`}
-                                        cx={RING_SIZE / 2}
-                                        cy={RING_SIZE / 2}
-                                        r={r}
-                                        stroke={Colors.borderColor}
-                                        strokeOpacity={TRACK_OPACITY}
-                                        strokeWidth={STROKE_WIDTH}
-                                        fill="none"
-                                    />
-                                );
-                            })}
-                            {/* Arcs */}
-                            {Array.from({ length: RING_COUNT }).map((_, i) => {
-                                const r = radiusForIndex(i);
-                                const circ = circumference(r);
-                                const stroke =
-                                    i === ringIndexForQuestion(index) ? ringColors[i] : ringColors[i];
-                                return (
-                                    <AnimatedCircle
-                                        key={`arc-${i}-${index}`}
-                                        cx={RING_SIZE / 2}
-                                        cy={RING_SIZE / 2}
-                                        r={r}
-                                        stroke={stroke}
-                                        strokeWidth={STROKE_WIDTH}
-                                        fill="none"
-                                        strokeDasharray={`${circ} ${circ}`}
-                                        strokeDashoffset={ringOffsets[i] as unknown as number}
-                                        strokeLinecap="round"
-                                        rotation="-90"
-                                        originX={RING_SIZE / 2}
-                                        originY={RING_SIZE / 2}
-                                    />
-                                );
-                            })}
-                        </Svg>
-                    </View>
-                )}
+                {/* Ring section */}
+                {
+                    index === 0
+                        ? (
+                            <TouchableOpacity onPress={handleNext} activeOpacity={0.8}>
+                                <Image source={Images.addRingImage} style={HomeStyles.ringImage} />
+                            </TouchableOpacity>
+                        )
+                        : index === 6
+                            ? (
+                                <ActivitiesChip />
+                            )
+                            : (
+                                <QuestionRing
+                                    ringColors={ringColors}
+                                    ringOffsets={ringOffsets}
+                                    showSuccess={showSuccess}
+                                    successScale={successScale}
+                                />
+                            )}
 
                 <SizeBox flex={1} />
 
+                {/* Slider */}
                 {current?.Slider && (
-                    <Slider
+                    <QuestionSlider
                         value={value}
-                        onValueChange={(v) => setValue(Array.isArray(v) ? v[0] : v)}
-                        containerStyle={{ width: width * 0.85 }}
-                        maximumTrackTintColor={Colors.sliderColor}
-                        minimumTrackTintColor={currentOptionColor}
-                        minimumValue={current.min ?? 1}
-                        maximumValue={current.max ?? 5}
-                        step={1}
-                        trackMarks={[1, 2, 3, 4, 5]}
-                        thumbStyle={{ height: 19, width: 32, backgroundColor: currentOptionColor }}
-                        renderTrackMarkComponent={Marker}
-                        animationType="timing"
+                        setValue={setValue}
+                        min={current.min ?? 1}
+                        max={current.max ?? 5}
+                        currentOptionColor={currentOptionColor}
                     />
                 )}
 
-                <SizeBox height={28} />
-
-                {index !== 0 && current?.Button ? (
-                    <TouchableOpacity
-                        onPress={handleNext}
-                        style={[HomeStyles.nextButton, { transform: [{ rotate: "270deg" }] }]}
-                        activeOpacity={0.7}
-                    >
-                        <Svgs.downArrow height={24} width={24} />
-                    </TouchableOpacity>
-                ) : (
-                    <SizeBox height={34} />
-                )}
+                {/* Next button */}
+                <NextButton
+                    onPress={handleNext}
+                    visible={index !== 0 && current?.Button}
+                />
             </View>
+            <Toast />
         </View>
     );
 };

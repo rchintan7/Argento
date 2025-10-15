@@ -12,6 +12,7 @@ import {
     ViewStyle,
     ColorValue,
     Keyboard,
+    DimensionValue,
 } from 'react-native';
 import Colors from '../constants/colors';
 import Fonts from '../constants/fonts';
@@ -31,6 +32,7 @@ interface TextInputBoxProps extends TextInputProps {
     backgroundColor?: ColorValue | undefined;
     require?: boolean | undefined;
     disable?: boolean;
+    height?: DimensionValue | undefined;
 }
 
 const TextInputBox: React.FC<TextInputBoxProps> = (props) => {
@@ -54,7 +56,7 @@ const TextInputBox: React.FC<TextInputBoxProps> = (props) => {
                 </View>
             )}
             {props.label && <SizeBox height={5} />}
-            <View style={[styles.boxBorder, { backgroundColor: props.backgroundColor ?? Colors.darkGrey }]}>
+            <View style={[styles.boxBorder, { backgroundColor: props.backgroundColor ?? Colors.darkGrey, height: props.height ?? 56 }]}>
                 <TextInput
                     ref={inputRef}
                     {...props}

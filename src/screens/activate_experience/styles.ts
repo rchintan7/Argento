@@ -66,6 +66,7 @@ const ActivateStyles = StyleSheet.create({
         backgroundColor: Colors.darkGrey,
         borderRadius: 4,
     },
+    datePicker: {},
 });
 
 export default ActivateStyles;

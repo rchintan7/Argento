@@ -60,7 +60,7 @@ const HomeStyles = StyleSheet.create({
         flex: 1,
         width: '100%',
         paddingHorizontal: 30,
-        paddingVertical: 30
+        paddingTop: 30
     },
     questionText: {
         color: Colors.primaryColor,
@@ -78,6 +78,10 @@ const HomeStyles = StyleSheet.create({
         alignItems: 'center',
         alignSelf: 'flex-end',
         borderRadius: 10,
+        backgroundColor: "rgba(0,0,0,0.01)",
+        position: 'absolute',
+        bottom: 20,
+        right: 20,
     },
     nextText: {
         color: Colors.blackColor,
@@ -91,6 +95,63 @@ const HomeStyles = StyleSheet.create({
         backgroundColor: Colors.sliderColor,
         bottom: -18,
         left: 15
+    },
+    successRingImage: {
+        height: 330,
+        width: 330,
+        alignSelf: 'center',
+        position: 'absolute',
+    },
+
+    chipContainer: {
+        backgroundColor: Colors.bottomTabColor,
+        borderRadius: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 32,
+        paddingHorizontal: 12,
+    },
+    selectedChipContainer: {
+        backgroundColor: Colors.primaryColor,
+        borderRadius: 30,
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 32,
+        paddingHorizontal: 12,
+    },
+    chipWraper: {
+        flexWrap: 'wrap',
+        flexDirection: 'row',
+        columnGap: 10,
+        rowGap: 10,
+    },
+    chipText: {
+        color: Colors.whiteColor,
+        fontSize: 14,
+        fontWeight: "400",
+    },
+    selectedChipText: {
+        color: Colors.blackColor,
+        fontSize: 14,
+        fontWeight: "400",
+    },
+
+    modelBackdrop: {
+        flex: 1,
+        backgroundColor: "rgba(0,0,0,0.6)",
+        justifyContent: "center",
+        paddingHorizontal: 30,
+    },
+    modelContainer: {
+        backgroundColor: Colors.bottomTabColor,
+        borderRadius: 16,
+        padding: 16,
+    },
+    modelTitle: {
+        color: Colors.whiteColor,
+        fontSize: 16,
+        fontWeight: "600",
+        alignSelf: 'center',
     },
 });
 

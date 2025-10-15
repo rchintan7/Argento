@@ -14,6 +14,7 @@ const Colors = {
     blueColor: '#1581ec',
     orangeColor: '#e64500',
     sliderColor: '#78787847',
+    ringColor: '#353535',
 };
 
 export default Colors;

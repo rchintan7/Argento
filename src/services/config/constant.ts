@@ -6,6 +6,7 @@ export default {
 
   // Get Social URL
 
+  getProfile: 'users/me',
   getSocial: 'users/exists',
 
   // Auth URL
@@ -15,4 +16,10 @@ export default {
   // Questions URL
 
   getQuestions: 'check-ins/questions',
+  postQuestions: 'check-ins/answer',
+
+  // Activities URL
+
+  getActivities: 'activities',
+  postActivities: 'activities',
 };

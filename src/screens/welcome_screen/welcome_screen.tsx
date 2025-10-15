@@ -14,7 +14,7 @@ import Toast from "react-native-toast-message";
 import { SELF_GET } from "../../services/api_endpoint";
 import { CommonActions } from "@react-navigation/native";
 import { useDispatch } from 'react-redux';
-import { loginSuccess } from "../../services/slices/user.slice";
+import { loginSuccess, storeUserDetails } from "../../services/slices/user.slice";
 
 interface WelcomeScreenProps {
     navigation: {
@@ -57,7 +57,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             const userInfo = await GoogleSignin.signIn();
 
             const email = userInfo?.data?.user?.email;
-            const firebaseUID = userInfo?.data?.idToken;
+            const firebaseUID = userInfo?.data?.user?.id;
 
             if (email) {
                 CustomToast({
@@ -90,22 +90,21 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
                 requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
             });
 
-            const { identityToken, email, user } = appleAuthResponse;
+            const { identityToken, email, user: appleUID } = appleAuthResponse;
 
             if (identityToken) {
-                await saveAppleKeyInAsync("appleKey", user);
+                await saveAppleKeyInAsync("appleKey", appleUID);
                 const decoded: AppleTokenPayload = jwtDecode(identityToken);
 
                 const finalEmail = email || decoded.email;
-                const firebaseUID = identityToken;
 
-                if (finalEmail) {
+                if (finalEmail && appleUID) {
                     CustomToast({
                         text: "Apple Sign-In successful",
                         toastType: "success"
                     });
-                    await saveValueInAsync('token', firebaseUID);
-                    dispatch(loginSuccess(firebaseUID));
+                    await saveValueInAsync('token', appleUID);
+                    dispatch(loginSuccess(appleUID));
                     socialMutation(finalEmail);
                 }
             } else {
@@ -132,11 +131,12 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
     const socialMutation = async (finalEmail: string) => {
         try {
             const data: any = await SELF_GET();
-            if (data?.exists === false) {
+            if (data?.data.exists === false) {
                 setTimeout(() => {
                     navigation.navigate("ActivateExperience", { email: finalEmail });
                 }, 1000);
             } else {
+                // dispatch(storeUserDetails(data?.data));
                 setTimeout(() => {
                     navigation.dispatch(
                         CommonActions.reset({

@@ -8,6 +8,7 @@ import NavigationService from '../Argento/src/services/api/navigation_service';
 import MainRoute from './src/navigation/main_route';
 import { Provider } from 'react-redux';
 import { persistor, store } from './src/services/redux/store';
+import { PersistGate } from 'redux-persist/integration/react';
 
 const queryClient = new QueryClient();
 
@@ -22,19 +23,19 @@ function App(): React.JSX.Element {
       <PaperProvider>
         <QueryClientProvider client={queryClient}>
           <Provider store={store}>
-            {/* <PersistGate loading={null} persistor={persistor}> */}
-            <NavigationContainer
-              ref={(navigator) => {
-                navigationRef.current = navigator;
-                // Ensure navigator is not null before setting it
-                if (navigator) {
-                  NavigationService.setNavigator(navigator);
-                }
-              }}
-            >
-              <MainRoute />
-            </NavigationContainer>
-            {/* </PersistGate> */}
+            <PersistGate loading={null} persistor={persistor}>
+              <NavigationContainer
+                ref={(navigator) => {
+                  navigationRef.current = navigator;
+                  // Ensure navigator is not null before setting it
+                  if (navigator) {
+                    NavigationService.setNavigator(navigator);
+                  }
+                }}
+              >
+                <MainRoute />
+              </NavigationContainer>
+            </PersistGate>
           </Provider>
         </QueryClientProvider>
       </PaperProvider>

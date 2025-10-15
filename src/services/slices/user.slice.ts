@@ -9,12 +9,14 @@ export const userSlice = createSlice({
   },
   reducers: {
     loginSuccess: (state, action) => {
-      console.log(state, action);
-
       state.token = action.payload;
       state.isLogin = true;
     },
     storeUserDetails: (state, action) => {
+      console.log(state);
+      console.log(action.payload, 'action.payload');
+
+
       state.userData = action.payload
     },
     logout: (state) => {

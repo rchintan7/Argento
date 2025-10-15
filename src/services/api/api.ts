@@ -16,11 +16,7 @@ axiosInstance.interceptors.request.use(
     async request => {
         try {
             let auth_token;
-            if (request.url === 'users') {
-                auth_token = await getValueFromAsync('token');
-            } else {
-                auth_token = await getValueFromAsync('token');
-            }
+            auth_token = await getValueFromAsync('token');
             if (auth_token && auth_token != null) {
                 auth_token = 'Bearer ' + auth_token;
                 console.log('Token -> ', auth_token);

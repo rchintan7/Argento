@@ -10,6 +10,7 @@ import DownArrow from './../assets/svgs/downArrow.svg';
 import RightArrow from './../assets/svgs/rightArrow.svg';
 import PreviousArrow from './../assets/svgs/previousArrow.svg';
 import NextArrow from './../assets/svgs/nextArrow.svg';
+import CloseIcon from './../assets/svgs/close.svg';
 
 const Svgs = {
     homeActive: HomeActive,
@@ -24,15 +25,14 @@ const Svgs = {
     rightArrow: RightArrow,
     previousArrow: PreviousArrow,
     nextArrow: NextArrow,
+    closeIcon: CloseIcon,
 }
 
 const Images = {
     splashImage: require('./../assets/images/splashImage.png'),
     introImage: require('./../assets/images/introImage.png'),
     addRingImage: require('./../assets/images/addRing.png'),
-    firstRingImage: require('./../assets/images/firstRing.png'),
-    secondRingImage: require('./../assets/images/secondRing.png'),
-    thirdRingImage: require('./../assets/images/thirdRing.png'),
+    successRingImage: require('./../assets/images/successRing.png'),
 }
 
 export { Images, Svgs }
