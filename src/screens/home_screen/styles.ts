@@ -1,7 +1,9 @@
-import { StyleSheet } from "react-native";
+import { Dimensions, StyleSheet } from "react-native";
 import Colors from "../../constants/colors";
 import Fonts from "../../constants/fonts";
 import GlobalStyles from "../../constants/global_styles";
+
+const { width } = Dimensions.get('screen');
 
 const HomeStyles = StyleSheet.create({
     headerView: {
@@ -152,6 +154,70 @@ const HomeStyles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         alignSelf: 'center',
+    },
+
+    checkInButton: {
+        borderRadius: 8,
+        height: 48,
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.primaryColor,
+        marginBottom: 20,
+    },
+    checkInDissableButton: {
+        borderRadius: 8,
+        height: 48,
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: Colors.bottomTabColor,
+        marginBottom: 20,
+    },
+    checkInButtonText: {
+        color: Colors.blackColor,
+        fontSize: 16,
+        fontFamily: Fonts.Medium,
+        letterSpacing: 0.8,
+    },
+    checkInDisablenText: {
+        color: Colors.primaryColor,
+        fontSize: 16,
+        fontFamily: Fonts.Medium,
+        letterSpacing: 0.8,
+    },
+    boxBorder: {
+        borderRadius: 10,
+        borderWidth: 1.5,
+        justifyContent: 'flex-start',
+        padding: 12,
+        height: 180,
+        borderColor: Colors.primaryColor,
+        backgroundColor: Colors.darkGrey,
+        width: width / 1.2,
+        marginTop: 40,
+    },
+    boxUnderStyle: {
+        color: Colors.whiteColor,
+        padding: 0,
+        alignSelf: 'flex-start',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-start',
+        fontWeight: '600',
+        fontSize: 16,
+        height: '100%',
+        width: '100%'
+    },
+    errorRowStyle: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 20,
+    },
+    errorText: {
+        fontSize: 12,
+        lineHeight: 13,
+        color: Colors.redColor,
+        fontWeight: '500',
     },
 });
 

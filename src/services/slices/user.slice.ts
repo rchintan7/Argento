@@ -13,10 +13,6 @@ export const userSlice = createSlice({
       state.isLogin = true;
     },
     storeUserDetails: (state, action) => {
-      console.log(state);
-      console.log(action.payload, 'action.payload');
-
-
       state.userData = action.payload
     },
     logout: (state) => {

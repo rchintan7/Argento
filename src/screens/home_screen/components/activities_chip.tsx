@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Text, View, FlatList, TouchableOpacity, ScrollView, Modal, KeyboardAvoidingView, Platform } from "react-native";
 import { useMutation } from "@tanstack/react-query";
-import { ACTIVITIES_GET, ACTIVITIES_POST } from "../../../services/api_endpoint";
+import { ACTIVITIES_GET, ACTIVITIES_CREATE_POST } from "../../../services/api_endpoint";
 import { CustomToast } from "../../../utils/toast";
 import HomeStyles from "../styles";
 import SizeBox from "../../../constants/sizebox";
@@ -29,14 +29,11 @@ type ActivityGroup = {
 interface ActivitiesChipProps {
     onSelect?: (activity: Activity) => void;
     selectedIds?: string[];
-    chipSize?: "sm" | "md" | "lg";
-    horizontalChips?: boolean;
 }
 
 const ActivitiesChip: React.FC<ActivitiesChipProps> = ({
     onSelect,
     selectedIds = [],
-    chipSize = "md",
 }) => {
     const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>([]);
     const [selected, setSelected] = useState<string[]>(selectedIds);
@@ -119,7 +116,7 @@ const ActivitiesChip: React.FC<ActivitiesChipProps> = ({
 
     const createMutation = useMutation({
         mutationFn: async (formData: any) => {
-            const { data } = await ACTIVITIES_POST(formData);
+            const { data } = await ACTIVITIES_CREATE_POST(formData);
             return data;
         },
         onSuccess: (data) => {

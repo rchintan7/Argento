@@ -11,10 +11,11 @@ import { jwtDecode } from 'jwt-decode';
 import { saveAppleKeyInAsync, saveValueInAsync } from "../../services/config/async";
 import { CustomToast } from "../../utils/toast";
 import Toast from "react-native-toast-message";
-import { SELF_GET } from "../../services/api_endpoint";
+import { SELF_GET, SELF_ME_GET } from "../../services/api_endpoint";
 import { CommonActions } from "@react-navigation/native";
 import { useDispatch } from 'react-redux';
 import { loginSuccess, storeUserDetails } from "../../services/slices/user.slice";
+import { useMutation } from "@tanstack/react-query";
 
 interface WelcomeScreenProps {
     navigation: {
@@ -136,12 +137,12 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
                     navigation.navigate("ActivateExperience", { email: finalEmail });
                 }, 1000);
             } else {
-                // dispatch(storeUserDetails(data?.data));
+                ProfileMutation.mutate();
                 setTimeout(() => {
                     navigation.dispatch(
                         CommonActions.reset({
                             index: 0,
-                            routes: [{ name: 'SecureEliteAccess' }],
+                            routes: [{ name: 'BottomTabs' }],
                         })
                     );
                 }, 1000);
@@ -150,6 +151,19 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             console.log('error', error);
         }
     };
+
+    const ProfileMutation = useMutation({
+        mutationFn: async () => {
+            const { data } = await SELF_ME_GET();
+            return data;
+        },
+        onSuccess: (data) => {
+            dispatch(storeUserDetails(data));
+        },
+        onError: (error: any) => {
+            CustomToast({ text: error?.message, toastType: 'error' });
+        },
+    });
 
     return (
         <View style={[GlobalStyles.mainContainer, GlobalStyles.center]}>

@@ -3,7 +3,9 @@ import {
     Animated,
     Easing,
     Image,
+    Keyboard,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View,
 } from "react-native";
 import GlobalStyles from "../../constants/global_styles";
@@ -14,7 +16,7 @@ import SizeBox from "../../constants/sizebox";
 import HeaderCalendar from "./components/header_calendar";
 import { useMutation } from "@tanstack/react-query";
 import { CustomToast } from "../../utils/toast";
-import { QUESTIONS_GET, QUESTIONS_PUT } from "../../services/api_endpoint";
+import { ACTIVITIES_POST, JOURNAL_POST, QUESTIONS_GET, QUESTIONS_POST } from "../../services/api_endpoint";
 import { useSelector } from "react-redux";
 import { RootState } from "../../services/redux/store";
 
@@ -25,6 +27,9 @@ import QuestionSlider from "./components/question_slider";
 import NextButton from "./components/next_button";
 import Toast from "react-native-toast-message";
 import ActivitiesChip from "./components/activities_chip";
+import CheckInButton, { toAmPm, useCheckinGates } from "./components/check_in_button";
+import JournalEntry from "./components/journal_entry";
+import HistorySection from "./components/history_section";
 
 // API types
 interface ApiScaleOption {
@@ -71,12 +76,51 @@ const ringIndexForQuestion = (questionIdx: number) => {
     return RING_COUNT - qIdx;
 };
 
+{/* <Popover
+                    isVisible={showPopover}
+                    onRequestClose={() => setShowPopover(false)}
+                    backgroundStyle={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+                    popoverStyle={styles.popoverStyle}
+                    from={(
+                        <TouchableOpacity onPress={() => setShowPopover(true)}>
+                            <Icons.info height={16} width={16} />
+                        </TouchableOpacity>
+                    )}>
+                    <Text style={styles.popoverText}>{t('filter.info')}</Text>
+                </Popover> */}
+
 const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     const { userData } = useSelector((state: RootState) => state.user);
     const [index, setIndex] = useState(0);
     const [apiQuestions, setApiQuestions] = useState<ApiQuestion[]>([]);
     const [value, setValue] = useState<number>(1);
     const fadeAnim = useRef(new Animated.Value(1)).current;
+    const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+    const [journal, setJournal] = useState<string>('');
+    const [journalError, setJournalError] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<string>('');
+
+    const isoToday = new Date().toISOString().split('T')[0];
+    const isToday = !selectedDate || selectedDate === isoToday;
+
+    // console.log('USERDATA =>', userData);
+    const morningHHMM = userData?.morning_checkin || "07:00";
+    const eveningHHMM = userData?.evening_checkin || "17:00";
+
+    const { showMorning, morningEnabled, eveningEnabled } = useCheckinGates(
+        morningHHMM,
+        eveningHHMM
+    );
+
+    const isEnabled = showMorning ? morningEnabled : eveningEnabled;
+
+    const dynamicTitle = showMorning
+        ? isEnabled
+            ? "BEGIN YOUR MORNING CHECK-IN"
+            : `MORNING CHECK-IN AT ${toAmPm(morningHHMM)}`
+        : isEnabled
+            ? "BEGIN YOUR EVENING CHECK-IN"
+            : `EVENING CHECK-IN AT ${toAmPm(eveningHHMM)}`;
 
     // Animated ring offsets
     const ringOffsets = useRef(
@@ -147,7 +191,14 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                 type: q.type,
             } as UiQuestion;
         });
-        return [welcome, ...dynamics];
+        const journalPrompt: UiQuestion = {
+            id: "static-journal",
+            Question: `Your Check-In is complete.\nMake a journal entry.`,
+            Slider: false,
+            Button: true,
+            type: "static",
+        };
+        return [welcome, ...dynamics, journalPrompt];
     }, [apiQuestions]);
 
     const current = uiQuestions[index];
@@ -231,13 +282,14 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             Animated.timing(fadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
             Animated.timing(fadeAnim, { toValue: 1, duration: 160, useNativeDriver: true }),
         ]).start(() => {
+            // For normal questions
             if (index < uiQuestions.length) {
-                if (index > 0 && index < uiQuestions.length) {
+                if (index > 0 && index < 6) {
                     const currentQuestion = uiQuestions[index];
                     const payload = {
                         answer: value,
                         question_id: currentQuestion.id,
-                        date: new Date().toISOString().split('T')[0]
+                        date: new Date().toISOString().split('T')[0],
                     };
                     questionMutation.mutate(payload);
                     setShowSuccess(true);
@@ -245,6 +297,31 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                     playTwoSecondPulse();
                     successTimer.current = setTimeout(() => setShowSuccess(false), 2000);
                 }
+
+                // ✅ When user reaches index 6 (activities)
+                if (index === 6) {
+                    const payload = {
+                        activity_ids: selectedActivities,
+                        date: new Date().toISOString().split('T')[0],
+                    };
+                    activitiesMutation.mutate(payload);
+                }
+
+                // ✅ When user reaches index 7 (journal)
+                if (index === 7) {
+                    const empty = !journal.trim();
+                    if (empty) {
+                        setJournalError(true);
+                        return; // stop navigation
+                    }
+                    setJournalError(false);
+                    const payload = {
+                        entry: journal,
+                        date: new Date().toISOString().split('T')[0],
+                    };
+                    journalMutation.mutate(payload);
+                }
+
                 setIndex((p) => p + 1);
             }
         });
@@ -252,7 +329,33 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
     const questionMutation = useMutation({
         mutationFn: async (formData: any) => {
-            const { data } = await QUESTIONS_PUT(formData);
+            const { data } = await QUESTIONS_POST(formData);
+            return data;
+        },
+        onSuccess: (data) => {
+            // CustomToast({ text: 'Submitted successfully', toastType: 'success' });
+        },
+        onError: (error: any) => {
+            CustomToast({ text: error?.message, toastType: 'error' });
+        },
+    });
+
+    const activitiesMutation = useMutation({
+        mutationFn: async (formData: any) => {
+            const { data } = await ACTIVITIES_POST(formData);
+            return data;
+        },
+        onSuccess: (data) => {
+            // CustomToast({ text: 'Submitted successfully', toastType: 'success' });
+        },
+        onError: (error: any) => {
+            CustomToast({ text: error?.message, toastType: 'error' });
+        },
+    });
+
+    const journalMutation = useMutation({
+        mutationFn: async (formData: any) => {
+            const { data } = await JOURNAL_POST(formData);
             return data;
         },
         onSuccess: (data) => {
@@ -267,54 +370,97 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         <View style={[GlobalStyles.mainContainer, GlobalStyles.startVertical]}>
 
             {/* Header calendar */}
-            <HeaderCalendar />
+            <HeaderCalendar onDateChange={(date) => setSelectedDate(date)} />
+            {
+                !isToday
+                    ? <>
+                        <SizeBox height={40} />
+                        <QuestionText fadeAnim={fadeAnim} text={`Great job on completing\nyour check-ins for the day !`} />
+                        <SizeBox flex={1} />
+                        <HistorySection date={selectedDate} />
+                        <SizeBox flex={1} />
+                    </>
+                    : <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                        <View style={[HomeStyles.secondContainer, { alignItems: "center" }]}>
+                            {/* Question text */}
+                            {index !== 8 && <QuestionText fadeAnim={fadeAnim} text={current?.Question} />}
 
-            <View style={[HomeStyles.secondContainer, { alignItems: "center" }]}>
-                {/* Question text */}
-                <QuestionText fadeAnim={fadeAnim} text={current?.Question} />
+                            {index !== 7 && <SizeBox flex={1} />}
 
-                <SizeBox flex={1} />
+                            {/* Ring section */}
+                            {
+                                index === 0
+                                    ? (
+                                        <>
+                                            <TouchableOpacity onPress={handleNext} activeOpacity={0.8}>
+                                                <Image source={Images.addRingImage} style={HomeStyles.ringImage} />
+                                            </TouchableOpacity>
+                                            <SizeBox height={30} />
+                                        </>
+                                    )
+                                    : index === 6
+                                        ? (
+                                            <ActivitiesChip
+                                                onSelect={(activities) => {
+                                                    const ids = Array.isArray(activities)
+                                                        ? activities.map((a) => typeof a === "string" ? a : a.id)
+                                                        : [];
+                                                    setSelectedActivities(ids);
+                                                }}
+                                                selectedIds={[]}
+                                            />
+                                        )
+                                        : index === 7
+                                            ? (
+                                                <JournalEntry
+                                                    onChange={(text) => setJournal(text)}
+                                                    error={journalError}
+                                                />
+                                            ) : index === 8
+                                                ? (
+                                                    <>
+                                                    </>
+                                                )
+                                                : (
+                                                    <QuestionRing
+                                                        ringColors={ringColors}
+                                                        ringOffsets={ringOffsets}
+                                                        showSuccess={showSuccess}
+                                                        successScale={successScale}
+                                                    />
+                                                )
+                            }
 
-                {/* Ring section */}
-                {
-                    index === 0
-                        ? (
-                            <TouchableOpacity onPress={handleNext} activeOpacity={0.8}>
-                                <Image source={Images.addRingImage} style={HomeStyles.ringImage} />
-                            </TouchableOpacity>
-                        )
-                        : index === 6
-                            ? (
-                                <ActivitiesChip />
-                            )
-                            : (
-                                <QuestionRing
-                                    ringColors={ringColors}
-                                    ringOffsets={ringOffsets}
-                                    showSuccess={showSuccess}
-                                    successScale={successScale}
+                            <SizeBox flex={1} />
+
+                            {/* Slider */}
+                            {current?.Slider && (
+                                <QuestionSlider
+                                    value={value}
+                                    setValue={setValue}
+                                    min={current.min ?? 1}
+                                    max={current.max ?? 5}
+                                    currentOptionColor={currentOptionColor}
                                 />
                             )}
 
-                <SizeBox flex={1} />
+                            {/* Next button */}
+                            <NextButton
+                                onPress={handleNext}
+                                visible={index !== 0 && current?.Button}
+                            />
 
-                {/* Slider */}
-                {current?.Slider && (
-                    <QuestionSlider
-                        value={value}
-                        setValue={setValue}
-                        min={current.min ?? 1}
-                        max={current.max ?? 5}
-                        currentOptionColor={currentOptionColor}
-                    />
-                )}
+                            {/* Check In button */}
+                            <CheckInButton
+                                title={dynamicTitle}
+                                onPress={handleNext}
+                                disabled={showMorning ? !morningEnabled : !eveningEnabled}
+                                visible={index === 0}
+                            />
+                        </View>
+                    </TouchableWithoutFeedback>
+            }
 
-                {/* Next button */}
-                <NextButton
-                    onPress={handleNext}
-                    visible={index !== 0 && current?.Button}
-                />
-            </View>
             <Toast />
         </View>
     );

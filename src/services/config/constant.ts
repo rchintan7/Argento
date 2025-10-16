@@ -21,5 +21,19 @@ export default {
   // Activities URL
 
   getActivities: 'activities',
-  postActivities: 'activities',
+  postCreateActivities: 'activities',
+  postActivities: 'check-ins/activities',
+
+  // Journal URL
+
+  getJournal: 'journals',
+  postJournal: 'journals',
+
+  // Journal URL
+
+  getHistory: 'check-ins/history?',
+
+  // Selfie URL
+
+  postSelfie: 'selfies',
 };

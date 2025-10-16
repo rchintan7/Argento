@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Animated, View, FlatList, Easing, TouchableOpacity, Text } from "react-native";
 import HomeStyles from "../styles";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,6 +7,7 @@ import Colors from "../../../constants/colors";
 import { Svgs } from "../../../constants/images";
 
 interface HeaderCalendarProps {
+    onDateChange?: (date: string) => void;
 }
 
 const days = [
@@ -19,20 +20,21 @@ const days = [
     { label: "S", day: "Sunday" },
 ];
 
-const HeaderCalendar: React.FC<HeaderCalendarProps> = ({ }) => {
+const HeaderCalendar: React.FC<HeaderCalendarProps> = ({ onDateChange }) => {
     const insets = useSafeAreaInsets();
     const today = new Date();
     const rotateAnim = useRef(new Animated.Value(0)).current;
-    const [selectedDay, setSelectedDay] = useState(today.getDay());
-    const [selectedDate, setSelectedDate] = useState(
-        today.toISOString().split("T")[0]
-    );
+    const [selectedDay, setSelectedDay] = useState(today.getDay() === 0 ? 6 : today.getDay() - 1);
+    const [selectedDate, setSelectedDate] = useState(today.toISOString().split("T")[0]);
     const [isExpanded, setIsExpanded] = useState(false);
     const animatedHeight = useRef(new Animated.Value(0)).current;
 
-    const adjustedIndex = selectedDay === 0 ? 6 : selectedDay - 1;
+    useEffect(() => {
+        if (onDateChange) onDateChange(selectedDate);
+    }, []);
 
-    React.useEffect(() => {
+    // Rotate arrow
+    useEffect(() => {
         Animated.timing(rotateAnim, {
             toValue: isExpanded ? 1 : 0,
             duration: 300,
@@ -58,7 +60,33 @@ const HeaderCalendar: React.FC<HeaderCalendarProps> = ({ }) => {
     const onDaySelect = (day: any) => {
         setSelectedDate(day.dateString);
         const dateObj = new Date(day.dateString);
-        setSelectedDay(dateObj.getDay());
+        const weekIndex = dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1;
+        setSelectedDay(weekIndex);
+
+        // Animate hide
+        Animated.timing(animatedHeight, {
+            toValue: 0,
+            duration: 400,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: false,
+        }).start(() => setIsExpanded(false));
+
+        if (onDateChange) onDateChange(day.dateString);
+    };
+
+    const onWeekDayPress = (index: number) => {
+        const today = new Date();
+        const dayOfWeek = today.getDay() === 0 ? 7 : today.getDay(); // Sunday = 7
+        const diff = index + 1 - dayOfWeek; // difference from today
+        const newDate = new Date(today);
+        newDate.setDate(today.getDate() + diff);
+
+        const isoDate = newDate.toISOString().split("T")[0];
+
+        setSelectedDay(index);
+        setSelectedDate(isoDate);
+
+        if (onDateChange) onDateChange(isoDate);
     };
 
     return (
@@ -75,11 +103,11 @@ const HeaderCalendar: React.FC<HeaderCalendarProps> = ({ }) => {
                         flexGrow: 1,
                     }}
                     renderItem={({ item, index }) => {
-                        const isSelected = index === adjustedIndex;
+                        const isSelected = index === selectedDay;
                         return (
                             <TouchableOpacity
                                 style={[HomeStyles.dayItem, isSelected && HomeStyles.selectedDayItem]}
-                                onPress={() => setSelectedDay(index + 1)}
+                                onPress={() => onWeekDayPress(index)}
                             >
                                 <Text
                                     style={[HomeStyles.dayText, isSelected && HomeStyles.selectedDayText]}
