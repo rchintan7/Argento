@@ -36,4 +36,16 @@ export default {
   // Selfie URL
 
   postSelfie: 'selfies',
+
+  // Insights 
+  getInsights: 'insights',
+
+  // Insights activities
+  getInsightActivities: 'insights/activities',
+
+  // Insights checkins
+  getInsightCheckins: 'insights/checkins?',
+
+  // Insights journals
+  getInsightJournals: 'insights/journal',
 };

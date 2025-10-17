@@ -33,3 +33,15 @@ export const HISTORY_GET = (date: string) => axiosInstance.get(`${constant.getHi
 //! SELFIE API
 
 export const SELFIE_POST = (data: any) => axiosInstance.post(constant.postSelfie, data)
+
+// GET INSIGHTS
+export const GET_INSIGHTS = () => axiosInstance.get(constant.getInsights)
+
+// GET INSIGHTS ACTIVITIES
+export const GET_INSIGHT_ACTIVITIES = () => axiosInstance.get(constant.getInsightActivities)
+
+// GET INSIGHTS CHECKINS
+export const GET_INSIGHT_CHECKINS = (startdate: string, todate: string) => axiosInstance.get(`${constant.getInsightCheckins}from_date=${startdate}&to_date=${todate}`)
+
+// GET INSIGHTS JOURNAL
+export const GET_INSIGHT_JOURNAL = () => axiosInstance.get(constant.getInsightJournals)
