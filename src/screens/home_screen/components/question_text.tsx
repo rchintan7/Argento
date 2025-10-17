@@ -6,7 +6,7 @@ import HomeStyles from "../styles";
 const { width } = Dimensions.get("window");
 
 interface Props {
-    fadeAnim: Animated.Value;
+    fadeAnim?: Animated.Value;
     text: string;
 }
 

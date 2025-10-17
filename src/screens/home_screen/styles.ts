@@ -103,6 +103,7 @@ const HomeStyles = StyleSheet.create({
         width: 330,
         alignSelf: 'center',
         position: 'absolute',
+        marginTop: 90,
     },
 
     chipContainer: {

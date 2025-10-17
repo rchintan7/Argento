@@ -30,6 +30,32 @@ import ActivitiesChip from "./components/activities_chip";
 import CheckInButton, { toAmPm, useCheckinGates } from "./components/check_in_button";
 import JournalEntry from "./components/journal_entry";
 import HistorySection from "./components/history_section";
+import FirstQuestionRing from "./components/first_question_ring";
+import AppButton from "../../componets/app_button";
+
+import ViewShot, { captureRef } from "react-native-view-shot";
+import Share from "react-native-share";
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const viewShotRef = React.createRef<any>();
+
+const handleShare = async () => {
+    // AsyncStorage.clear();
+    if (!viewShotRef.current) return;
+
+    try {
+        const base64Image = await viewShotRef.current.capture();
+        await Share.open({
+            title: "My Check-in Screenshot",
+            url: `data:image/png;base64,${base64Image}`,
+            message: "Check out my check-in progress!",
+        });
+    } catch (err) {
+        console.log("Share error:", err);
+        CustomToast({ text: "Failed to share screenshot", toastType: "error" });
+    }
+};
 
 // API types
 interface ApiScaleOption {
@@ -63,31 +89,14 @@ const RING_SIZE = 200;
 const STROKE_WIDTH = 1.6;
 const RING_GAP = 10;
 
-const radiusForIndex = (i: number) => {
-    const outer = (RING_SIZE - STROKE_WIDTH) / 2;
-    return outer - i * RING_GAP;
-};
+const radiusForIndex = (i: number) => (RING_SIZE - STROKE_WIDTH) / 2 - i * RING_GAP;
 const circumference = (r: number) => 2 * Math.PI * r;
 
-// Modify the ringIndexForQuestion function to handle 6 questions with 5 rings
 const ringIndexForQuestion = (questionIdx: number) => {
-    if (questionIdx > RING_COUNT) return RING_COUNT - 1; // Last ring for the 6th question
-    const qIdx = Math.max(1, Math.min(RING_COUNT, questionIdx));
-    return RING_COUNT - qIdx;
+    let logicalIdx = questionIdx - 1;
+    if (questionIdx > 2) logicalIdx -= 1;
+    return RING_COUNT - 1 - logicalIdx;
 };
-
-{/* <Popover
-                    isVisible={showPopover}
-                    onRequestClose={() => setShowPopover(false)}
-                    backgroundStyle={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-                    popoverStyle={styles.popoverStyle}
-                    from={(
-                        <TouchableOpacity onPress={() => setShowPopover(true)}>
-                            <Icons.info height={16} width={16} />
-                        </TouchableOpacity>
-                    )}>
-                    <Text style={styles.popoverText}>{t('filter.info')}</Text>
-                </Popover> */}
 
 const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     const { userData } = useSelector((state: RootState) => state.user);
@@ -103,7 +112,6 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
     const isoToday = new Date().toISOString().split('T')[0];
     const isToday = !selectedDate || selectedDate === isoToday;
 
-    // console.log('USERDATA =>', userData);
     const morningHHMM = userData?.morning_checkin || "07:00";
     const eveningHHMM = userData?.evening_checkin || "17:00";
 
@@ -116,7 +124,7 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
 
     const dynamicTitle = showMorning
         ? isEnabled
-            ? "BEGIN YOUR MORNING CHECK-IN"
+            ? "BEGIN YOUR EVENING CHECK-IN"
             : `MORNING CHECK-IN AT ${toAmPm(morningHHMM)}`
         : isEnabled
             ? "BEGIN YOUR EVENING CHECK-IN"
@@ -127,15 +135,70 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         Array.from({ length: RING_COUNT }, () => new Animated.Value(0))
     ).current;
 
-    // Colors per ring
     const [ringColors, setRingColors] = useState<string[]>(
         Array.from({ length: RING_COUNT }, () => Colors.ringColor)
     );
 
-    // Success animation
+    const committedOffsets = useRef<number[]>(
+        Array.from({ length: RING_COUNT }, () => 0)
+    ).current;
+    const committedColors = useRef<string[]>(
+        Array.from({ length: RING_COUNT }, () => Colors.ringColor)
+    ).current;
+
     const successScale = useRef(new Animated.Value(0.95)).current;
     const [showSuccess, setShowSuccess] = useState(false);
     const successTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const successOpacity = useRef(new Animated.Value(0)).current;
+
+    const playTwoSecondPulse = () => {
+        successScale.setValue(0.95);
+        successOpacity.setValue(1);
+        Animated.parallel([
+            Animated.sequence([
+                Animated.timing(successScale, {
+                    toValue: 1.1,
+                    duration: 1000,
+                    easing: Easing.out(Easing.quad),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(successScale, {
+                    toValue: 0.95,
+                    duration: 1000,
+                    easing: Easing.inOut(Easing.quad),
+                    useNativeDriver: true,
+                }),
+            ]),
+            Animated.sequence([
+                Animated.timing(successOpacity, {
+                    toValue: 1,
+                    duration: 200,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(successOpacity, {
+                    toValue: 0,
+                    duration: 300,
+                    delay: 1700,
+                    useNativeDriver: true,
+                }),
+            ]),
+        ]).start(() => setShowSuccess(false));
+    };
+
+    useEffect(() => {
+        return () => {
+            if (successTimer.current) clearTimeout(successTimer.current);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (index === 1) {
+            setShowSuccess(true);
+            playTwoSecondPulse();
+            if (successTimer.current) clearTimeout(successTimer.current);
+            successTimer.current = setTimeout(() => setShowSuccess(false), 2000);
+        }
+    }, [index]);
 
     // Fetch questions
     const questionsMutation = useMutation({
@@ -158,7 +221,6 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         questionsMutation.mutate();
     }, []);
 
-    // Prepare UI Questions
     const uiQuestions: UiQuestion[] = useMemo(() => {
         const welcome: UiQuestion = {
             id: "static-welcome",
@@ -167,11 +229,10 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             Button: true,
             type: "static",
         };
-        const dynamics = apiQuestions.map((q) => {
+
+        const dynamics: UiQuestion[] = apiQuestions.map((q) => {
             if (q.type === "scale" && q.scale_options?.length) {
-                const options = [...q.scale_options].sort(
-                    (a, b) => a.display_order - b.display_order
-                );
+                const options = [...q.scale_options].sort((a, b) => a.display_order - b.display_order);
                 return {
                     id: q.id,
                     Question: q.question_text,
@@ -191,6 +252,16 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                 type: q.type,
             } as UiQuestion;
         });
+
+        const completion: UiQuestion = {
+            id: "static-complete",
+            Question: `Have a great day ${userData?.name}.\nYour Morning Check-in is complete.`,
+            Slider: false,
+            Button: false,
+            type: "static",
+        };
+        dynamics.splice(1, 0, completion);
+
         const journalPrompt: UiQuestion = {
             id: "static-journal",
             Question: `Your Check-In is complete.\nMake a journal entry.`,
@@ -198,25 +269,57 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             Button: true,
             type: "static",
         };
-        return [welcome, ...dynamics, journalPrompt];
+
+        const finalCompletion: UiQuestion = {
+            id: "static-final-complete",
+            Question: `Great job on completing\nyour check-ins for the day!`,
+            Slider: false,
+            Button: false,
+            type: "static",
+        };
+
+        return [welcome, ...dynamics, journalPrompt, finalCompletion];
     }, [apiQuestions]);
+
+    // ✅ Load completion from AsyncStorage
+    useEffect(() => {
+        const loadCompletion = async () => {
+            const completedDate = await AsyncStorage.getItem('morningCheckInCompleted');
+            const today = new Date().toISOString().split('T')[0];
+            if (completedDate === today) {
+                const finalIndex = uiQuestions.findIndex(q => q.id === "static-final-complete");
+                setIndex(finalIndex);
+            }
+        };
+        loadCompletion();
+    }, [uiQuestions]);
+
+    // Optional: reset next day
+    useEffect(() => {
+        const resetCheckIn = async () => {
+            const completedDate = await AsyncStorage.getItem('morningCheckInCompleted');
+            const today = new Date().toISOString().split('T')[0];
+            if (completedDate && completedDate !== today) {
+                await AsyncStorage.removeItem('morningCheckInCompleted');
+                setIndex(0);
+            }
+        };
+        resetCheckIn();
+    }, []);
 
     const current = uiQuestions[index];
 
-    // Reset slider when question changes
     useEffect(() => {
         if (index > 0 && current?.Slider && current.min != null) {
             setValue(current.min);
         }
     }, [index, current]);
 
-    // Ratio for arc fill
     const ratio = useMemo(() => {
         const v = typeof value === "number" ? value + 1 : 1;
         return Math.max(0, Math.min(1, (v - 1) / 5));
     }, [value]);
 
-    // Get current option color
     const currentOptionColor = useMemo(() => {
         const q = uiQuestions[index];
         if (!q?.options?.length) return Colors.blueColor;
@@ -230,114 +333,74 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
         return nearest?.color_hex ?? Colors.blueColor;
     }, [uiQuestions, index, value]);
 
-    // Animate active ring
     useEffect(() => {
-        if (index === 0) return;
+        if (index !== 0 && index !== 2 && index !== 6 && index !== 7) {
+            for (let i = 0; i < RING_COUNT; i++) {
+                ringOffsets[i].setValue(committedOffsets[i]);
+            }
+            setRingColors(prev => {
+                const next = [...prev];
+                for (let i = 0; i < RING_COUNT; i++) next[i] = committedColors[i];
+                return next;
+            });
+        }
+    }, [index]);
+
+    useEffect(() => {
+        if (index === 0 || index === 2) return;
         const rIdx = ringIndexForQuestion(index);
+        if (rIdx < 0 || rIdx >= RING_COUNT) return;
+
+        const r = radiusForIndex(rIdx);
+        const circ = circumference(r);
+        const target = circ * (1 - ratio);
+
         setRingColors((prev) => {
             if (prev[rIdx] === currentOptionColor) return prev;
             const next = [...prev];
             next[rIdx] = currentOptionColor;
             return next;
         });
-        const r = radiusForIndex(rIdx);
-        const circ = circumference(r);
-        const target = circ * (1 - ratio);
 
         Animated.timing(ringOffsets[rIdx], {
             toValue: target,
             duration: 350,
             useNativeDriver: false,
-        }).start();
+        }).start(() => {
+            committedOffsets[rIdx] = target;
+            committedColors[rIdx] = currentOptionColor;
+        });
     }, [value, index, ratio, currentOptionColor]);
 
-    // Pulse animation
-    const playTwoSecondPulse = () => {
-        successScale.setValue(0.95);
-        Animated.sequence([
-            Animated.timing(successScale, {
-                toValue: 1.1,
-                duration: 1000,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: true,
-            }),
-            Animated.timing(successScale, {
-                toValue: 0.95,
-                duration: 1000,
-                easing: Easing.inOut(Easing.quad),
-                useNativeDriver: true,
-            }),
-        ]).start(() => setShowSuccess(false));
-    };
+    const outerRadius = radiusForIndex(RING_COUNT - 1);
+    const outerCirc = circumference(outerRadius);
+    const ringOffset = useRef(new Animated.Value(outerCirc)).current;
+    const [ringColor, setRingColor] = useState(Colors.blueColor);
 
     useEffect(() => {
-        return () => {
-            if (successTimer.current) clearTimeout(successTimer.current);
-        };
-    }, []);
+        if (!current?.Slider) return;
+        const ratio = Math.max(0, Math.min(1, value / (current.max ?? 5)));
+        const offset = outerCirc * (1 - ratio);
+        Animated.timing(ringOffset, {
+            toValue: offset,
+            duration: 300,
+            useNativeDriver: false,
+        }).start();
 
-    // Next button logic
-    const handleNext = () => {
-        Animated.sequence([
-            Animated.timing(fadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
-            Animated.timing(fadeAnim, { toValue: 1, duration: 160, useNativeDriver: true }),
-        ]).start(() => {
-            // For normal questions
-            if (index < uiQuestions.length) {
-                if (index > 0 && index < 6) {
-                    const currentQuestion = uiQuestions[index];
-                    const payload = {
-                        answer: value,
-                        question_id: currentQuestion.id,
-                        date: new Date().toISOString().split('T')[0],
-                    };
-                    questionMutation.mutate(payload);
-                    setShowSuccess(true);
-                    if (successTimer.current) clearTimeout(successTimer.current);
-                    playTwoSecondPulse();
-                    successTimer.current = setTimeout(() => setShowSuccess(false), 2000);
-                }
+        const nearestOption = current.options?.reduce((acc, opt) => {
+            const dist = Math.abs((value ?? 0) - opt.value);
+            return dist < acc.dist ? { opt, dist } : acc;
+        }, { opt: current.options?.[0], dist: Infinity }).opt;
 
-                // ✅ When user reaches index 6 (activities)
-                if (index === 6) {
-                    const payload = {
-                        activity_ids: selectedActivities,
-                        date: new Date().toISOString().split('T')[0],
-                    };
-                    activitiesMutation.mutate(payload);
-                }
-
-                // ✅ When user reaches index 7 (journal)
-                if (index === 7) {
-                    const empty = !journal.trim();
-                    if (empty) {
-                        setJournalError(true);
-                        return; // stop navigation
-                    }
-                    setJournalError(false);
-                    const payload = {
-                        entry: journal,
-                        date: new Date().toISOString().split('T')[0],
-                    };
-                    journalMutation.mutate(payload);
-                }
-
-                setIndex((p) => p + 1);
-            }
-        });
-    };
+        if (nearestOption) setRingColor(nearestOption.color_hex);
+    }, [value, outerCirc]);
 
     const questionMutation = useMutation({
         mutationFn: async (formData: any) => {
             const { data } = await QUESTIONS_POST(formData);
             return data;
         },
-        onSuccess: (data) => {
-            // CustomToast({ text: 'Submitted successfully', toastType: 'success' });
-        },
-        onError: (error: any) => {
-            CustomToast({ text: error?.message, toastType: 'error' });
-        },
+        onError: (error: any) => { },
     });
 
     const activitiesMutation = useMutation({
@@ -345,11 +408,8 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             const { data } = await ACTIVITIES_POST(formData);
             return data;
         },
-        onSuccess: (data) => {
-            // CustomToast({ text: 'Submitted successfully', toastType: 'success' });
-        },
         onError: (error: any) => {
-            CustomToast({ text: error?.message, toastType: 'error' });
+            CustomToast({ text: error?.message, toastType: "error" });
         },
     });
 
@@ -358,83 +418,153 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
             const { data } = await JOURNAL_POST(formData);
             return data;
         },
-        onSuccess: (data) => {
-            // CustomToast({ text: 'Submitted successfully', toastType: 'success' });
-        },
         onError: (error: any) => {
-            CustomToast({ text: error?.message, toastType: 'error' });
+            CustomToast({ text: error?.message, toastType: "error" });
         },
     });
 
+    const handleNext = async () => {
+        Animated.sequence([
+            Animated.timing(fadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 160, useNativeDriver: true }),
+        ]).start(async () => {
+            if (index < uiQuestions.length) {
+
+                // Commit first sleep question to main QuestionRing
+                if (index === 1) {
+                    const firstRingIdx = ringIndexForQuestion(1);
+                    const r = radiusForIndex(firstRingIdx);
+                    const circ = circumference(r);
+                    const sleepQuestion = uiQuestions[1];
+                    const sleepRatio = Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            ((value ?? sleepQuestion.min ?? 1) - (sleepQuestion.min ?? 1)) /
+                            ((sleepQuestion.max ?? 5) - (sleepQuestion.min ?? 1))
+                        )
+                    );
+                    const targetOffset = circ * (1 - sleepRatio);
+                    committedOffsets[firstRingIdx] = targetOffset;
+                    committedColors[firstRingIdx] = currentOptionColor;
+                    ringOffsets[firstRingIdx].setValue(targetOffset);
+                }
+
+                // Question submission
+                if (index > 0 && index < 6) {
+                    const currentQuestion = uiQuestions[index];
+                    const payload = {
+                        answer: value,
+                        question_id: currentQuestion.id,
+                        date: new Date().toISOString().split('T')[0],
+                    };
+                    questionMutation.mutate(payload);
+                }
+
+                if (index === 7) {
+                    const payload = {
+                        activity_ids: selectedActivities,
+                        date: new Date().toISOString().split('T')[0],
+                    };
+                    activitiesMutation.mutate(payload);
+                }
+
+                if (index === 8) {
+                    const empty = !journal.trim();
+                    if (empty) {
+                        setJournalError(true);
+                        return;
+                    }
+                    setJournalError(false);
+                    const payload = {
+                        entry: journal,
+                        date: new Date().toISOString().split('T')[0],
+                    };
+                    journalMutation.mutate(payload);
+
+                    // ✅ Persist morning check-in completed
+                    await AsyncStorage.setItem('morningCheckInCompleted', new Date().toISOString().split('T')[0]);
+                }
+
+                setIndex((p) => p + 1);
+            }
+        });
+    };
+
     return (
         <View style={[GlobalStyles.mainContainer, GlobalStyles.startVertical]}>
-
-            {/* Header calendar */}
             <HeaderCalendar onDateChange={(date) => setSelectedDate(date)} />
-            {
-                !isToday
-                    ? <>
-                        <SizeBox height={40} />
-                        <QuestionText fadeAnim={fadeAnim} text={`Great job on completing\nyour check-ins for the day !`} />
-                        <SizeBox flex={1} />
-                        <HistorySection date={selectedDate} />
-                        <SizeBox flex={1} />
-                    </>
-                    : <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-                        <View style={[HomeStyles.secondContainer, { alignItems: "center" }]}>
-                            {/* Question text */}
-                            {index !== 8 && <QuestionText fadeAnim={fadeAnim} text={current?.Question} />}
 
-                            {index !== 7 && <SizeBox flex={1} />}
+            {!isToday ? (
+                <>
+                    <SizeBox height={40} />
+                    <QuestionText fadeAnim={fadeAnim} text={`Great job on completing\nyour check-ins for the day !`} />
+                    <SizeBox flex={1} />
+                    <HistorySection date={selectedDate} />
+                    <SizeBox flex={1} />
+                </>
+            ) : (
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={[HomeStyles.secondContainer, { alignItems: "center" }]}>
+                        <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1, result: "base64" }} style={[HomeStyles.secondContainer, { alignItems: "center" }]}>
+                            {index !== 10 && <QuestionText fadeAnim={fadeAnim} text={current?.Question} />}
+                            {(index !== 7 && index !== 8) && <SizeBox flex={1} />}
 
-                            {/* Ring section */}
-                            {
-                                index === 0
-                                    ? (
-                                        <>
-                                            <TouchableOpacity onPress={handleNext} activeOpacity={0.8}>
-                                                <Image source={Images.addRingImage} style={HomeStyles.ringImage} />
-                                            </TouchableOpacity>
-                                            <SizeBox height={30} />
-                                        </>
-                                    )
-                                    : index === 6
-                                        ? (
-                                            <ActivitiesChip
-                                                onSelect={(activities) => {
-                                                    const ids = Array.isArray(activities)
-                                                        ? activities.map((a) => typeof a === "string" ? a : a.id)
-                                                        : [];
-                                                    setSelectedActivities(ids);
-                                                }}
-                                                selectedIds={[]}
-                                            />
-                                        )
-                                        : index === 7
-                                            ? (
-                                                <JournalEntry
-                                                    onChange={(text) => setJournal(text)}
-                                                    error={journalError}
-                                                />
-                                            ) : index === 8
-                                                ? (
-                                                    <>
-                                                    </>
-                                                )
-                                                : (
-                                                    <QuestionRing
-                                                        ringColors={ringColors}
-                                                        ringOffsets={ringOffsets}
-                                                        showSuccess={showSuccess}
-                                                        successScale={successScale}
-                                                    />
-                                                )
-                            }
+                            {index === 0 ? (
+                                <>
+                                    <TouchableOpacity onPress={handleNext} activeOpacity={0.8}>
+                                        <Image source={Images.addRingImage} style={HomeStyles.ringImage} />
+                                    </TouchableOpacity>
+                                    <SizeBox height={30} />
+                                </>
+                            ) : index === 2 ? (
+                                <FirstQuestionRing
+                                    firstRingColor={ringColor}
+                                    firstRingOffset={ringOffset}
+                                    totalRings={RING_COUNT}
+                                />
+                            ) : index === 7 ? (
+                                <ActivitiesChip
+                                    onSelect={(activities) => {
+                                        const ids = Array.isArray(activities)
+                                            ? activities.map((a) => typeof a === "string" ? a : a.id)
+                                            : [];
+                                        setSelectedActivities(ids);
+                                    }}
+                                    selectedIds={[]}
+                                />
+                            ) : index === 8 ? (
+                                <JournalEntry
+                                    onChange={(text) => setJournal(text)}
+                                    error={journalError}
+                                />
+                            ) : (
+                                <>
+                                    <QuestionRing
+                                        ringColors={ringColors}
+                                        ringOffsets={ringOffsets}
+                                        showSuccess={showSuccess}
+                                        successScale={successScale}
+                                    />
+                                    {showSuccess && (
+                                        <Animated.Image
+                                            source={Images.successRingImage}
+                                            style={[
+                                                HomeStyles.successRingImage,
+                                                {
+                                                    opacity: successOpacity,
+                                                    transform: [{ scale: successScale }],
+                                                },
+                                            ]}
+                                            resizeMode="contain"
+                                        />
+                                    )}
+                                </>
+                            )}
 
                             <SizeBox flex={1} />
 
-                            {/* Slider */}
-                            {current?.Slider && (
+                            {(index !== 7 && current?.Slider) && (
                                 <QuestionSlider
                                     value={value}
                                     setValue={setValue}
@@ -444,22 +574,29 @@ const HomeScreen: React.FC<{ navigation: any }> = ({ navigation }) => {
                                 />
                             )}
 
-                            {/* Next button */}
-                            <NextButton
-                                onPress={handleNext}
-                                visible={index !== 0 && current?.Button}
-                            />
+                            {(index === 9) && (
+                                <>
+                                    <AppButton
+                                        text="Share"
+                                        onPress={handleShare}
+                                    />
+                                    <SizeBox height={40} />
+                                </>
+                            )}
 
-                            {/* Check In button */}
+                            <NextButton onPress={handleNext} visible={index !== 0 && current?.Button} />
+
                             <CheckInButton
                                 title={dynamicTitle}
                                 onPress={handleNext}
                                 disabled={showMorning ? !morningEnabled : !eveningEnabled}
-                                visible={index === 0}
+                                visible={index === 2}
                             />
-                        </View>
-                    </TouchableWithoutFeedback>
-            }
+
+                        </ViewShot>
+                    </View>
+                </TouchableWithoutFeedback>
+            )}
 
             <Toast />
         </View>

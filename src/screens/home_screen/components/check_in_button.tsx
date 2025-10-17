@@ -58,7 +58,7 @@ export const useCheckinGates = (morningHHMM: string, eveningHHMM: string) => {
     return useMemo<Gates>(() => {
         const morningAt = parseToday(morningHHMM);
         const noon = new Date();
-        noon.setHours(12, 0, 0, 0);
+        noon.setHours(16, 0, 0, 0);
 
         const eveningAt = parseToday(eveningHHMM);
 
